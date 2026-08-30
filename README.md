@@ -265,8 +265,8 @@ A versão atual foi desenvolvida como um projeto compacto, concentrando a
 lógica principal em um único arquivo HTML:
 
 ``` text
-Garden-Wars/
-├── Garden-Wars.html       # Jogo completo
+Garden-wars/
+├── Garden-wars.html       # Jogo completo
 ├── README.md              # Documentação
 └── LICENSE                # Licença do projeto
 ```
@@ -310,13 +310,13 @@ Não é necessário instalar dependências ou configurar um servidor.
 ### 1. Clone o repositório
 
 ``` bash
-git clone https://github.com/Jos3ng/Garden-Wars.git
+git clone https://github.com/Jos3ng/Garden-wars.git
 ```
 
 ### 2. Entre na pasta
 
 ``` bash
-cd Garden-Wars
+cd Garden-wars
 ```
 
 ### 3. Execute
@@ -324,7 +324,7 @@ cd Garden-Wars
 Abra o arquivo:
 
 ``` text
-Garden-Wars.html
+Garden-wars.html
 ```
 
 em um navegador moderno.
@@ -564,8 +564,8 @@ rendering timing.
 The current version is intentionally compact:
 
 ``` text
-Garden-Wars/
-├── Garden-Wars.html       # Complete game
+Garden-wars/
+├── Garden-wars.html       # Complete game
 ├── README.md              # Documentation
 └── LICENSE                # Project license
 ```
@@ -609,13 +609,13 @@ No dependencies or build tools are required.
 ### 1. Clone the repository
 
 ``` bash
-git clone https://github.com/Jos3ng/Garden-Wars.git
+git clone https://github.com/Jos3ng/Garden-wars.git
 ```
 
 ### 2. Enter the project directory
 
 ``` bash
-cd Garden-Wars
+cd Garden-wars
 ```
 
 ### 3. Run the game
@@ -623,7 +623,7 @@ cd Garden-Wars
 Open:
 
 ``` text
-Garden-Wars.html
+Garden-wars.html
 ```
 
 in any modern web browser.
