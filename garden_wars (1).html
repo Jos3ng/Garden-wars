@@ -1,0 +1,2744 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Garden Wars</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      background: radial-gradient(circle at top, #3a5a1f, #1c2b0e);
+      font-family: 'Trebuchet MS', Verdana, sans-serif;
+      color: #f0f5e6;
+      padding: 16px;
+    }
+    #gameWrapper { display: flex; gap: 14px; padding: 16px; background: #2f210f; border-radius: 16px; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+
+    #introScreen {
+      max-width: 760px;
+      background: #2f210f;
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.6);
+      padding: 28px 32px;
+    }
+    #introInner { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    #introScreen h1 { margin: 0; font-size: 30px; color: #ffe082; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    #introText { text-align: center; font-size: 14px; line-height: 1.6; color: #e4d8c4; max-width: 620px; margin: 4px 0; }
+    #introSubtext { font-size: 14px; font-weight: bold; color: #ffe082; margin: 8px 0 4px 0; }
+    #mapGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; }
+    .map-option {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      background: #4a3620; border: 2px solid #6b4d2a; border-radius: 10px; padding: 8px; cursor: pointer;
+    }
+    .map-option:hover { background: #5d4527; border-color: #ffd54f; transform: translateY(-2px); }
+    .map-option canvas { border-radius: 4px; border: 1px solid #2a1c0e; image-rendering: pixelated; }
+    .map-option .map-name { font-size: 12px; font-weight: bold; color: #ffe082; }
+    #canvasArea { position: relative; }
+    canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
+    #gameCanvas { background: #8bc34a; border-radius: 10px; border: 4px solid #5d4225; display: block; cursor: crosshair; touch-action: none; }
+    #toast {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(20,20,20,0.85); color: #ffdd55; padding: 6px 16px; border-radius: 20px;
+      font-size: 14px; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+      max-width: 90%; text-align: center;
+    }
+    #sidebar {
+      width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 632px; overflow-y: auto; padding-right: 4px;
+    }
+    #sidebar::-webkit-scrollbar { width: 8px; }
+    #sidebar::-webkit-scrollbar-thumb { background: #6b4d2a; border-radius: 4px; }
+    .panel { background: #4a3620; border: 2px solid #6b4d2a; border-radius: 10px; padding: 10px 12px; flex-shrink: 0; }
+    #statsPanel { display:flex; flex-direction:column; gap:6px; }
+    #statsPanel h2 { margin: 0 0 4px 0; font-size: 17px; color: #ffe082; text-align:center;}
+    .statRow { display:flex; justify-content: space-between; font-size: 14px; }
+    #lifeBarOuter { background:#2a2a2a; border-radius:6px; height:14px; overflow:hidden; border:1px solid #111; }
+    #lifeBarInner { height:100%; background: linear-gradient(90deg,#43a047,#a5d6a7); width:100%; transition:width 0.2s; }
+    #waveStatus { font-size:13px; text-align:center; min-height:32px; color:#d7ccc8; }
+    button { font-family: inherit; cursor: pointer; }
+    #startWaveBtn {
+      background:#ffb300; color:#3e2723; border:none; padding:8px; border-radius:8px;
+      font-weight:bold; font-size:14px; width:100%;
+    }
+    #startWaveBtn:disabled { background:#7a6a4a; color:#b0a894; cursor:not-allowed; }
+    #autoplayBtn {
+      width:100%; margin-top:6px; background:#3d5a7a; color:#e0f0ff; border:1px solid #4d6d90;
+      padding:6px; border-radius:6px; font-size:12px; font-weight:bold;
+    }
+    #autoplayBtn.on { background:#2e7d32; border-color:#43a047; }
+    #speedBtn {
+      width:100%; margin-top:6px; background:#5d4225; color:#ffe082; border:1px solid #6b4d2a;
+      padding:6px; border-radius:6px; font-size:12px; font-weight:bold;
+    }
+    #pauseBtn {
+      width:100%; margin-top:6px; background:#6d4c00; color:#fff3c4; border:1px solid #8a6100;
+      padding:6px; border-radius:6px; font-size:12px; font-weight:bold;
+    }
+    #pauseBtn.on { background:#fbc02d; color:#3e2723; border-color:#f9a825; }
+    #shopTitle { margin: 0 0 6px 0; font-size: 13px; color:#ffe082; text-align:center; }
+    #cancelSelectionBtn {
+      width:100%; margin-bottom:8px; background:#5d2a2a; color:#ffd0d0; border:1px solid #7a3a3a;
+      padding:5px; border-radius:6px; font-size:11px;
+    }
+    .shop-grid { display:grid; grid-template-columns: 1fr 1fr; gap:6px; }
+    .shop-item {
+      display:flex; flex-direction:column; align-items:center; gap:2px;
+      background:#5d4225; border:2px solid #6b4d2a; border-radius:8px;
+      padding:5px 3px; font-size:10.5px; text-align:center; line-height:1.2;
+    }
+    .shop-item:hover { background:#6e4f2c; }
+    .shop-item.selected { border-color:#ffd54f; background:#7a5730; box-shadow:0 0 8px rgba(255,213,79,0.6); }
+    .shop-item .name { font-weight:bold; }
+    .shop-item .cost { color:#ffe082; }
+
+    #towerInfoPanel { display:none; flex-direction:column; gap:4px; }
+    #towerInfoPanel h3 { margin:0; font-size:15px; color:#ffe082; }
+    .path-col { background:#5d4225; border:2px solid #6b4d2a; border-radius:8px; padding:7px 8px; margin-top:6px; }
+    .path-col.dominant { border-color:#ffd54f; }
+    .path-name { font-weight:bold; font-size:11.5px; color:#ffe082; display:flex; justify-content:space-between; }
+    .pips { display:flex; gap:3px; margin:4px 0; }
+    .pip { width:13px; height:13px; border-radius:50%; background:#3a2a18; border:1px solid #6b4d2a; }
+    .pip.filled { background:#ffd54f; border-color:#ffb300; }
+    .tier-current { font-size:10.5px; color:#e4d8c4; margin-bottom:5px; line-height:1.35; }
+    .tier-current b { color:#fff59d; }
+    .tier-maxed { font-size:11px; color:#66bb6a; font-weight:bold; margin-top:2px; }
+    .buy-tier-btn {
+      width:100%; background:#3d7a3f; color:#fff; border:none; padding:6px; border-radius:6px;
+      font-size:10.5px; margin-top:2px; font-weight: bold;
+    }
+    .buy-tier-btn:disabled { background:#55503f; color:#948a72; cursor:not-allowed; }
+    .reset-path-btn {
+      width:100%; background:#8a4a2a; color:#f0e0d0; border:none; padding:3px; border-radius:6px;
+      font-size:9.5px; margin-top:4px;
+    }
+    #abilityPanel {
+      display:none; margin-top:6px; background:#3a2a5a; border:2px solid #6a4aa0; border-radius:8px; padding:8px;
+    }
+    #abilityPanel .ability-name { font-weight:bold; color:#e0cfff; font-size:12.5px; }
+    #abilityPanel .ability-desc { font-size:10px; color:#c9b8e0; margin:4px 0 6px 0; line-height:1.3; }
+    #abilityBtn {
+      width:100%; background:#7e3ff2; color:#fff; border:none; padding:7px; border-radius:6px;
+      font-weight:bold; font-size:12.5px;
+    }
+    #abilityBtn:disabled { background:#4a4058; color:#9088a0; }
+    #sellBtn {
+      background:#c62828; color:white; border:none; padding:6px; border-radius:6px;
+      font-size:13px; font-weight:bold; width:100%; margin-top:8px;
+    }
+    #instructions { font-size:10.5px; color:#cbb99a; line-height:1.4; }
+    #muteBtn {
+      background: #5d4225; color: #ffe082; border: 1px solid #6b4d2a;
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; margin-top: 4px;
+    }
+    #gameOverOverlay {
+      position:absolute; inset:0; background:rgba(10,10,10,0.85);
+      display:none; align-items:center; justify-content:center; flex-direction:column;
+      border-radius:10px; gap:12px; color:#fff;
+    }
+    #gameOverOverlay.show { display:flex; }
+    #gameOverOverlay h1 { color:#ef5350; margin:0; }
+    #restartBtn { background:#66bb6a; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:15px; }
+  </style>
+</head>
+<body>
+<div id="introScreen">
+  <div id="introInner">
+    <h1>🌿 Garden Wars</h1>
+    <p id="introText">
+      As lesmas invadiram o jardim — e trouxeram reforços: caracóis-tanque, chefes gigantes,
+      pragas voadoras e até um caracol arcano imune a atordoamento. Recrute um exército de
+      10 insetos, evolua cada um por 3 caminhos diferentes até o Tier 5, e defenda seu jardim
+      onda após onda.
+    </p>
+    <p id="introSubtext">Escolha por onde a invasão vai entrar:</p>
+    <div id="mapGrid"></div>
+  </div>
+</div>
+<div id="gameWrapper" style="display:none;">
+
+  <div id="canvasArea">
+    <canvas id="gameCanvas" width="900" height="600"></canvas>
+    <div id="toast"></div>
+    <div id="gameOverOverlay">
+      <h1>FIM DE JOGO</h1>
+      <p id="gameOverText">As lesmas tomaram o jardim.</p>
+      <button id="restartBtn">Jogar Novamente</button>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="panel" id="statsPanel">
+      <h2>🌿 Garden Wars</h2>
+      <div class="statRow"><span>Vida</span><span id="lifeText">100</span></div>
+      <div id="lifeBarOuter"><div id="lifeBarInner"></div></div>
+      <div class="statRow"><span>Moedas</span><span id="coinsText">100</span></div>
+      <div class="statRow"><span>Onda</span><span id="waveText">0</span></div>
+      <div class="statRow"><span>🏆 Recorde</span><span id="bestWaveText">0</span></div>
+      <button id="muteBtn">🔊 Som Ligado</button>
+    </div>
+
+    <div class="panel">
+      <button id="startWaveBtn">Iniciar Primeira Onda</button>
+      <button id="pauseBtn">⏸️ Pausar</button>
+      <button id="autoplayBtn">🤖 Autoplay: Desligado</button>
+      <button id="speedBtn">⏩ Velocidade: 1x</button>
+      <div id="waveStatus">Posicione insetos e comece quando estiver pronto.</div>
+    </div>
+
+    <div class="panel" id="towerInfoPanel">
+      <h3 id="infoTitle">Torre</h3>
+      <div class="statRow"><span>Dano</span><span id="infoDamage"></span></div>
+      <div class="statRow"><span>Alcance</span><span id="infoRange"></span></div>
+      <div class="statRow"><span>Cadência</span><span id="infoRate"></span></div>
+
+      <div id="pathsContainer"></div>
+
+      <div id="abilityPanel">
+        <div class="ability-name" id="abilityName"></div>
+        <div class="ability-desc" id="abilityDesc"></div>
+        <button id="abilityBtn">Usar Habilidade</button>
+      </div>
+
+      <button id="sellBtn">Vender torre (60% de volta)</button>
+    </div>
+
+    <div class="panel" id="towerShop">
+      <div id="shopTitle">Insetos disponíveis (clique para selecionar)</div>
+      <button id="cancelSelectionBtn">✖ Cancelar seleção</button>
+      <div class="shop-grid" id="shopGrid"></div>
+    </div>
+
+    <div class="panel" id="instructions">
+      Cada torre tem <b>3 Caminhos</b> de evolução (5 tiers cada). Você pode levar
+      <b>um caminho até o T5</b>, um <b>segundo até o T2</b>, e o terceiro fica
+      bloqueado — como no crosspathing do BTD6. O botão "Resetar caminho" devolve
+      50% das moedas daquele caminho se você quiser trocar de estratégia.<br><br>
+      Torres com <b>Habilidade Ativa</b> (Caminho 2, T3+) ganham um botão roxo com
+      recarga própria.<br><br>
+      Clique numa torre no mapa pra evoluí-la. <b>Botão direito</b> ou <b>Esc</b>
+      cancela a seleção. A partir da 2ª onda aparece o <b>Caracol</b> (tanque).
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CANVAS E CAMINHO
+   ============================================================ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// 6 mapas com traçados bem diferentes entre si. O jogador escolhe um na
+// tela inicial (ver seção "INTRO E SELEÇÃO DE MAPA" perto do fim do script).
+const MAPS = [
+  {
+    name: 'Jardim Clássico',
+    path: [
+      { x: -30, y: 80 }, { x: 650, y: 80 }, { x: 650, y: 230 }, { x: 120, y: 230 },
+      { x: 120, y: 400 }, { x: 800, y: 400 }, { x: 800, y: 540 }, { x: -30, y: 540 }
+    ]
+  },
+  {
+    name: 'Serpentina',
+    path: [
+      { x: -30, y: 150 }, { x: 250, y: 150 }, { x: 450, y: 450 }, { x: 650, y: 150 }, { x: 930, y: 450 }
+    ]
+  },
+  {
+    name: 'Labirinto',
+    path: [
+      { x: -30, y: 60 }, { x: 150, y: 60 }, { x: 150, y: 540 }, { x: 300, y: 540 },
+      { x: 300, y: 120 }, { x: 450, y: 120 }, { x: 450, y: 480 }, { x: 600, y: 480 },
+      { x: 600, y: 160 }, { x: 750, y: 160 }, { x: 750, y: 560 }, { x: 930, y: 560 }
+    ]
+  },
+  {
+    name: 'Zigue-Zague',
+    path: [
+      { x: -30, y: 500 }, { x: 300, y: 100 }, { x: 600, y: 500 }, { x: 930, y: 100 }
+    ]
+  },
+  {
+    name: 'Espiral',
+    path: [
+      { x: -30, y: 60 }, { x: 870, y: 60 }, { x: 870, y: 540 }, { x: 100, y: 540 },
+      { x: 100, y: 150 }, { x: 750, y: 150 }, { x: 750, y: 450 }, { x: 230, y: 450 },
+      { x: 230, y: 250 }, { x: 600, y: 250 }, { x: 600, y: 350 }, { x: 350, y: 350 }
+    ]
+  },
+  {
+    name: 'Dente-de-Serra',
+    path: [
+      { x: -30, y: 300 }, { x: 100, y: 100 }, { x: 250, y: 300 }, { x: 400, y: 100 },
+      { x: 550, y: 300 }, { x: 700, y: 100 }, { x: 850, y: 300 }, { x: 930, y: 200 }
+    ]
+  }
+];
+
+let selectedMapIndex = 0;
+let path = MAPS[0].path;
+
+function computePathLengths(points) {
+  const segLengths = [];
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const dx = points[i + 1].x - points[i].x;
+    const dy = points[i + 1].y - points[i].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segLengths.push(len);
+    total += len;
+  }
+  return { segLengths, total };
+}
+let pathSegLengths = computePathLengths(path).segLengths;
+let pathTotalLength = computePathLengths(path).total;
+
+function getPositionOnPath(distance) {
+  if (distance <= 0) return { x: path[0].x, y: path[0].y };
+  let remaining = distance;
+  for (let i = 0; i < pathSegLengths.length; i++) {
+    if (remaining <= pathSegLengths[i]) {
+      const t = pathSegLengths[i] === 0 ? 0 : remaining / pathSegLengths[i];
+      const p0 = path[i], p1 = path[i + 1];
+      return { x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t };
+    }
+    remaining -= pathSegLengths[i];
+  }
+  const last = path[path.length - 1];
+  return { x: last.x, y: last.y };
+}
+
+function distToSegment(p, a, b) {
+  const l2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projX = a.x + t * (b.x - a.x);
+  const projY = a.y + t * (b.y - a.y);
+  return Math.hypot(p.x - projX, p.y - projY);
+}
+function distanceToPath(p) {
+  let min = Infinity;
+  for (let i = 0; i < path.length - 1; i++) {
+    const d = distToSegment(p, path[i], path[i + 1]);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+/* ============================================================
+   FUNDO DO JARDIM
+   ============================================================ */
+const bgCanvas = document.createElement('canvas');
+bgCanvas.width = canvas.width;
+bgCanvas.height = canvas.height;
+const bgCtx = bgCanvas.getContext('2d');
+
+function drawPathOnBackground() {
+  bgCtx.strokeStyle = '#c9a06a';
+  bgCtx.lineWidth = 48;
+  bgCtx.lineCap = 'round';
+  bgCtx.lineJoin = 'round';
+  bgCtx.beginPath();
+  bgCtx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) bgCtx.lineTo(path[i].x, path[i].y);
+  bgCtx.stroke();
+  bgCtx.strokeStyle = 'rgba(120,85,45,0.4)';
+  bgCtx.lineWidth = 52;
+  bgCtx.globalAlpha = 0.35;
+  bgCtx.stroke();
+  bgCtx.globalAlpha = 1;
+  bgCtx.strokeStyle = '#d9b382';
+  bgCtx.lineWidth = 4;
+  bgCtx.setLineDash([12, 10]);
+  bgCtx.stroke();
+  bgCtx.setLineDash([]);
+}
+
+function drawDecorations() {
+  for (let i = 0; i < 500; i++) {
+    const x = Math.random() * bgCanvas.width;
+    const y = Math.random() * bgCanvas.height;
+    if (distanceToPath({ x, y }) < 40) continue;
+    bgCtx.fillStyle = Math.random() < 0.5 ? 'rgba(0,90,0,0.10)' : 'rgba(255,255,255,0.06)';
+    bgCtx.beginPath();
+    bgCtx.arc(x, y, Math.random() * 2.5 + 1, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+  const flowerColors = ['#ff6b9d', '#ffd93d', '#ff8c42', '#a685e2', '#4fc3f7'];
+  for (let i = 0; i < 22; i++) {
+    const x = Math.random() * bgCanvas.width;
+    const y = Math.random() * bgCanvas.height;
+    if (distanceToPath({ x, y }) < 50) continue;
+    const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+    bgCtx.fillStyle = color;
+    for (let p = 0; p < 5; p++) {
+      const ang = (p / 5) * Math.PI * 2;
+      bgCtx.beginPath();
+      bgCtx.arc(x + Math.cos(ang) * 4, y + Math.sin(ang) * 4, 3, 0, Math.PI * 2);
+      bgCtx.fill();
+    }
+    bgCtx.fillStyle = '#fff59d';
+    bgCtx.beginPath();
+    bgCtx.arc(x, y, 2.5, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+}
+
+function generateBackground() {
+  bgCtx.fillStyle = '#8bc34a';
+  bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+  drawPathOnBackground();
+  drawDecorations();
+  const start = path[0];
+  bgCtx.fillStyle = '#5d4037';
+  bgCtx.beginPath();
+  bgCtx.arc(start.x + 20, start.y, 18, 0, Math.PI * 2);
+  bgCtx.fill();
+  const end = path[path.length - 1];
+  bgCtx.fillStyle = '#8d6e63';
+  bgCtx.fillRect(end.x - 40, end.y - 20, 30, 24);
+  bgCtx.fillStyle = '#5d4037';
+  bgCtx.beginPath();
+  bgCtx.moveTo(end.x - 46, end.y - 20);
+  bgCtx.lineTo(end.x - 25, end.y - 36);
+  bgCtx.lineTo(end.x - 4, end.y - 20);
+  bgCtx.closePath();
+  bgCtx.fill();
+}
+generateBackground();
+
+function selectMap(index) {
+  selectedMapIndex = index;
+  path = MAPS[index].path;
+  const computed = computePathLengths(path);
+  pathSegLengths = computed.segLengths;
+  pathTotalLength = computed.total;
+  generateBackground();
+}
+
+/* ============================================================
+   MOTOR DE PIXEL ART
+   ============================================================ */
+function mirrorRows(halfRows) {
+  return halfRows.map(row => row + row.slice(0, -1).split('').reverse().join(''));
+}
+
+const TEMPLATE_ROUNDBUG_HALF = [
+  ".....A.",
+  "....A..",
+  "....HHH",
+  "...OHHH",
+  "..OBBBB",
+  ".LBBBBM",
+  "OBBBBBM",
+  ".LBBBBM",
+  "OBBBBBM",
+  ".LBBBBM",
+  "..BBBBM",
+  "...BBBM",
+  "....BBM"
+];
+
+const TEMPLATE_SPIDER_HALF = [
+  ".......",
+  "....FFF",
+  "...OHHH",
+  "LOBBBBM",
+  "LBBBBBM",
+  "LBBBBBM",
+  "LBBBBBM",
+  ".BBBBBM",
+  ".BBBBBM",
+  "..BBBBM",
+  "..BBBBM",
+  "...BBBM",
+  "....BBM"
+];
+
+const TEMPLATE_GRASSHOPPER_HALF = [
+  ".....A.",
+  "....A..",
+  "...A...",
+  "...OHHH",
+  "...OHHH",
+  "..L.BBM",
+  ".L..BBM",
+  "...BBBM",
+  "..L.BBM",
+  ".L..BBM",
+  "...BBBM",
+  "J...BBM",
+  ".J..BBM",
+  "..J.BBM",
+  "...J.BM",
+  "....BBM",
+  ".....BM"
+];
+
+const TEMPLATE_BUTTERFLY_HALF = [
+  ".......A.",
+  "......A.C",
+  ".....BBBC",
+  "...BBBBBC",
+  "..BBBBBBC",
+  "......BBC",
+  "...BBBBBC",
+  "..BBBBBBC",
+  "....BBBBC",
+  "......BBC",
+  "........C"
+];
+
+const TEMPLATE_MOTH_HALF = [
+  ".......A.",
+  "......AA.",
+  ".....BBBC",
+  "...BBBBBC",
+  "..BBBBBBC",
+  ".BBBBBBBC",
+  "..BBBBBBC",
+  "...BBBBBC",
+  "....BBBBC",
+  "......BBC",
+  "........C"
+];
+
+const TEMPLATE_DRAGONFLY_HALF = [
+  ".......A.",
+  "........C",
+  "........C",
+  "BBBBBBBBC",
+  "........C",
+  "BBBBBBBBC",
+  "........C",
+  "........C",
+  "........C",
+  "........C",
+  "........C"
+];
+
+const TEMPLATE_ANT_HALF = [
+  ".....A.",
+  "....A..",
+  "...A...",
+  "...OHHH",
+  "...HHHH",
+  "...HHHH",
+  "....HHH",
+  ".....BM",
+  ".L..BBB",
+  "..L.BBB",
+  ".L..BBB",
+  "..L.BBB",
+  "....BBB",
+  ".L...BM",
+  "..L..BM",
+  "...BBBM",
+  "..BBBBM",
+  "..BBBBM",
+  "...BBBM",
+  "....BBM",
+  ".....BM"
+];
+
+const TEMPLATE_FIREFLY_HALF = [
+  ".....A.",
+  "....A..",
+  "...OHHH",
+  "..L.BBM",
+  ".L..BBM",
+  "...BBBM",
+  "..L.BBM",
+  "....XBM",
+  "....XXM",
+  ".....XM"
+];
+
+const TEMPLATES = {
+  roundBug: TEMPLATE_ROUNDBUG_HALF,
+  spider: TEMPLATE_SPIDER_HALF,
+  grasshopper: TEMPLATE_GRASSHOPPER_HALF,
+  ant: TEMPLATE_ANT_HALF,
+  butterfly: TEMPLATE_BUTTERFLY_HALF,
+  moth: TEMPLATE_MOTH_HALF,
+  dragonfly: TEMPLATE_DRAGONFLY_HALF,
+  firefly: TEMPLATE_FIREFLY_HALF
+};
+
+/* ------------------------------------------------------------
+   Cores: interpolação/escurecimento/clareamento de hex
+   ------------------------------------------------------------ */
+function hexToRgb(hex) {
+  const c = hex.replace('#', '');
+  const full = c.length === 3 ? c.split('').map(ch => ch + ch).join('') : c;
+  const num = parseInt(full, 16);
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+function darkenColor(hex, amt) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgb(${Math.max(0, Math.round(r * (1 - amt)))},${Math.max(0, Math.round(g * (1 - amt)))},${Math.max(0, Math.round(b * (1 - amt)))})`;
+}
+function lightenColor(hex, amt) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgb(${Math.min(255, Math.round(r + (255 - r) * amt))},${Math.min(255, Math.round(g + (255 - g) * amt))},${Math.min(255, Math.round(b + (255 - b) * amt))})`;
+}
+function lerpColor(hexA, hexB, t) {
+  t = Math.max(0, Math.min(1, t));
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  const r = Math.round(a.r + (b.r - a.r) * t);
+  const g = Math.round(a.g + (b.g - a.g) * t);
+  const bl = Math.round(a.b + (b.b - a.b) * t);
+  return `rgb(${r},${g},${bl})`;
+}
+
+/* ------------------------------------------------------------
+   Forma (grade de caracteres) x Paleta são independentes agora:
+   a FORMA depende só do template+overlay+ferrão (cacheável),
+   a PALETA é calculada por torre/instância (cor muda com os
+   caminhos/tiers comprados), então não pode ser cacheada global.
+   ------------------------------------------------------------ */
+const shapeCache = new Map();
+function buildShape(template, overlay, stinger) {
+  const cacheKey = template + '|' + (overlay || '') + '|' + (stinger ? 1 : 0);
+  if (shapeCache.has(cacheKey)) return shapeCache.get(cacheKey);
+  const half = TEMPLATES[template].map(row => row.split(''));
+
+  if (overlay === 'horn') {
+    half[0][5] = 'N'; half[1][4] = 'N'; half[1][5] = 'N'; half[2][5] = 'N';
+  } else if (overlay === 'stripes') {
+    for (const ri of [6, 8]) { for (let c = 1; c <= 5; c++) half[ri][c] = 'T'; }
+  } else if (overlay === 'spots') {
+    half[6][3] = 'X'; half[8][2] = 'X'; half[8][4] = 'X'; half[10][3] = 'X';
+  } else if (overlay === 'hourglass') {
+    half[7][6] = 'R'; half[8][6] = 'R';
+  } else if (overlay === 'visor') {
+    // faixa de viseira reluzente na cabeça (usado no Grasshopper Zero-One)
+    half[3][4] = 'V'; half[3][5] = 'V'; half[3][6] = 'V'; half[4][5] = 'V'; half[4][6] = 'V';
+  } else if (overlay === 'mothra') {
+    // asa em duas cores (base escura + faixa alaranjada) com "olho" circular
+    // e um risco de brilho perto do topo - visual único pra Mothra (T5).
+    for (const ri of [5, 6, 7, 8, 9]) {
+      for (let c = 0; c < half[ri].length; c++) if (half[ri][c] === 'B') half[ri][c] = 'Q';
+    }
+    half[7][6] = 'R'; half[7][5] = 'X'; half[7][7] = 'X'; half[6][6] = 'X'; half[8][6] = 'X';
+    half[3][4] = 'T'; half[4][5] = 'T';
+  }
+
+  const halfStrings = half.map(a => a.join(''));
+  let rows = mirrorRows(halfStrings);
+  if (stinger) {
+    const w = rows[0].length;
+    const mid = Math.floor(w / 2);
+    rows = rows.concat(['.'.repeat(mid) + 'X' + '.'.repeat(w - mid - 1)]);
+  }
+  shapeCache.set(cacheKey, rows);
+  return rows;
+}
+
+function resolvePalette(basePalette) {
+  const B = basePalette.B;
+  return {
+    B,
+    O: basePalette.O || '#141414',
+    H: basePalette.H || darkenColor(B, 0.55),
+    L: basePalette.L || '#141414',
+    A: basePalette.A || '#141414',
+    M: basePalette.M || darkenColor(B, 0.3),
+    J: basePalette.J || darkenColor(B, 0.15),
+    F: basePalette.F || '#f5f5f0',
+    N: basePalette.N || '#8a8a8a',
+    T: basePalette.T || '#1a1a1a',
+    X: basePalette.X || '#141414',
+    R: basePalette.R || '#c62828',
+    C: basePalette.C || '#242424',
+    V: basePalette.V || '#e53935',
+    Q: basePalette.Q || '#e8720c'
+  };
+}
+
+function drawWingsBlob(ctx2d, cellPx, color, width, height) {
+  const wingW = width * cellPx * 0.55;
+  const wingH = height * cellPx * 0.4;
+  const offsetY = -height * cellPx * 0.05;
+  ctx2d.fillStyle = color || 'rgba(255,255,255,0.4)';
+  ctx2d.beginPath();
+  ctx2d.ellipse(-width * cellPx * 0.38, offsetY, wingW / 2, wingH / 2, -0.3, 0, Math.PI * 2);
+  ctx2d.fill();
+  ctx2d.beginPath();
+  ctx2d.ellipse(width * cellPx * 0.38, offsetY, wingW / 2, wingH / 2, 0.3, 0, Math.PI * 2);
+  ctx2d.fill();
+}
+
+// def: {template, overlay, stinger, wings, wingsColor} (vem de TOWER_DEFS[key])
+// palette: já resolvida (objeto simples char->cor)
+function drawCreatureSprite(ctx2d, cx, cy, cellPx, def, angle, palette) {
+  angle = angle || 0;
+  const rows = buildShape(def.template, def.overlay, def.stinger);
+  const width = rows[0].length, height = rows.length;
+  const totalW = width * cellPx, totalH = height * cellPx;
+  ctx2d.save();
+  ctx2d.translate(cx, cy);
+  ctx2d.rotate(angle);
+  if (def.wings) drawWingsBlob(ctx2d, cellPx, def.wingsColor, width, height);
+  ctx2d.translate(-totalW / 2, -totalH / 2);
+  for (let r = 0; r < height; r++) {
+    const row = rows[r];
+    for (let c = 0; c < width; c++) {
+      const ch = row[c];
+      if (ch === '.' || ch === ' ') continue;
+      ctx2d.fillStyle = palette[ch] || '#ff00ff';
+      ctx2d.fillRect(Math.round(c * cellPx), Math.round(r * cellPx), Math.ceil(cellPx), Math.ceil(cellPx));
+    }
+  }
+  ctx2d.restore();
+}
+
+/* ============================================================
+   LESMA E CARACOL - gerados por fórmula (elipses + linhas grossas).
+   ============================================================ */
+function newCharGrid(w, h) {
+  const g = [];
+  for (let y = 0; y < h; y++) g.push(new Array(w).fill('.'));
+  return g;
+}
+function ellipseFill(grid, cx, cy, rx, ry, ch) {
+  const h = grid.length, w = grid[0].length;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      if (dx * dx + dy * dy <= 1.0) grid[y][x] = ch;
+    }
+  }
+}
+function thickLine(grid, x0, y0, x1, y1, thickness, ch) {
+  const h = grid.length, w = grid[0].length;
+  const dist = Math.hypot(x1 - x0, y1 - y0);
+  const steps = Math.max(1, Math.round(dist * 2));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const px = x0 + (x1 - x0) * t, py = y0 + (y1 - y0) * t;
+    const r = thickness / 2;
+    const yMin = Math.max(0, Math.floor(py - r - 1)), yMax = Math.min(h - 1, Math.ceil(py + r + 1));
+    const xMin = Math.max(0, Math.floor(px - r - 1)), xMax = Math.min(w - 1, Math.ceil(px + r + 1));
+    for (let y = yMin; y <= yMax; y++) {
+      for (let x = xMin; x <= xMax; x++) {
+        if ((x - px) * (x - px) + (y - py) * (y - py) <= r * r) grid[y][x] = ch;
+      }
+    }
+  }
+}
+function drawCharGridSprite(ctx2d, cx, cy, cellPx, grid, palette, facingLeft) {
+  const w = grid[0].length, h = grid.length;
+  const totalW = w * cellPx, totalH = h * cellPx;
+  ctx2d.save();
+  ctx2d.translate(cx, cy);
+  if (facingLeft) ctx2d.scale(-1, 1);
+  ctx2d.translate(-totalW / 2, -totalH / 2);
+  for (let r = 0; r < h; r++) {
+    for (let c = 0; c < w; c++) {
+      const ch = grid[r][c];
+      if (ch === '.' || ch === ' ') continue;
+      ctx2d.fillStyle = palette[ch] || '#ff00ff';
+      ctx2d.fillRect(Math.round(c * cellPx), Math.round(r * cellPx), Math.ceil(cellPx), Math.ceil(cellPx));
+    }
+  }
+  ctx2d.restore();
+}
+
+const molluskShapeCache = new Map();
+function buildMolluskShape(withShell) {
+  const cacheKey = withShell ? 'snail' : 'slug';
+  if (molluskShapeCache.has(cacheKey)) return molluskShapeCache.get(cacheKey);
+
+  // W maior no caracol pra concha caber deslocada pra trás sem tampar a cabeça.
+  const W = withShell ? 33 : 20;
+  const H = 18;
+  const grid = newCharGrid(W, H);
+  const footCenterRow = 12;
+  const headCx = 4, headCy = footCenterRow - 1;
+
+  // Pé/cauda: já nasce perto da cabeça e afina até virar a ponta da cauda,
+  // com uma leve curva pra cima bem no final (efeito "cauda encaracolada").
+  const footStart = withShell ? 6 : 5;
+  const maxHalf = withShell ? 3.6 : 3.2;
+  for (let x = footStart - 1; x < W; x++) {
+    const t = Math.max(0, (x - footStart) / (W - 1 - footStart));
+    const half = maxHalf * (1 - Math.pow(t, 0.7));
+    const curl = t > 0.72 ? 2.2 * Math.pow(t, 3) : 0;
+    const center = footCenterRow - curl;
+    const top = Math.round(center - half), bottom = Math.round(center + half);
+    for (let y = top; y <= bottom; y++) {
+      if (y < 0 || y >= H) continue;
+      const frac = (y - top) / Math.max(1, bottom - top);
+      grid[y][x] = frac > 0.55 ? 'Z' : 'Y';
+    }
+  }
+
+  // Cabeça: bulbo redondo bem definido na FRENTE (sempre visível, com ou
+  // sem concha - é o que faltava, o "olho" antes não tinha rosto nenhum
+  // por baixo dele).
+  ellipseFill(grid, headCx, headCy, 3.4, 2.9, 'O');
+  ellipseFill(grid, headCx, headCy, 2.5, 2.1, 'Y');
+
+  // Antena curta terminando numa bolinha de olho BEM visível (não só 1px).
+  thickLine(grid, headCx + 1, headCy - 2, headCx - 1, headCy - 6, 1.4, 'O');
+  thickLine(grid, headCx + 1, headCy - 2, headCx - 1, headCy - 6, 0.9, 'A');
+  ellipseFill(grid, headCx - 1, headCy - 7, 1.4, 1.4, 'E');
+
+  if (withShell) {
+    // Concha deslocada pra TRÁS: cobre o meio/fundo do pé, não a cabeça,
+    // e deixa a ponta da cauda espiando por trás dela - como no seu print
+    // de referência.
+    const cx = 18, cy = 7, r = 7.6;
+    ellipseFill(grid, cx, cy, r + 1.1, r + 1.1, 'O');
+    ellipseFill(grid, cx, cy, r, r, 'K');
+    ellipseFill(grid, cx + 3.0, cy + 3.0, r * 0.55, r * 0.55, 'D');
+    ellipseFill(grid, cx + 5.0, cy + 5.0, r * 0.22, r * 0.22, 'K');
+    ellipseFill(grid, cx - 3.0, cy - 3.0, r * 0.32, r * 0.28, 'S');
+  }
+
+  molluskShapeCache.set(cacheKey, grid);
+  return grid;
+}
+
+function drawSlugSprite(ctx2d, cx, cy, radius, color, facingLeft) {
+  const grid = buildMolluskShape(false);
+  const palette = { O: '#1a1a2e', Y: color, Z: darkenColor(color, 0.35), A: '#1a1a2e', E: '#141414' };
+  const cellPx = (radius * 2.7) / grid.length;
+  drawCharGridSprite(ctx2d, cx, cy, cellPx, grid, palette, facingLeft);
+}
+function drawSnailSprite(ctx2d, cx, cy, radius, shellColor, facingLeft) {
+  const grid = buildMolluskShape(true);
+  const footColor = '#f5be50';
+  const palette = {
+    O: '#1a1a2e', Y: footColor, Z: darkenColor(footColor, 0.35),
+    K: shellColor, D: darkenColor(shellColor, 0.35), S: lightenColor(shellColor, 0.45),
+    A: '#1a1a2e', E: '#141414'
+  };
+  const cellPx = (radius * 2.7) / grid.length;
+  drawCharGridSprite(ctx2d, cx, cy, cellPx, grid, palette, facingLeft);
+}
+
+// Caracol Arcano: mesma concha, mas com anéis em cores bem contrastadas
+// (roxo + ciano) pra parecer uma espiral hipnótica - visual único que avisa
+// "eu sou imune a atordoamento" à distância.
+function drawArcaneSnailSprite(ctx2d, cx, cy, radius, facingLeft) {
+  const grid = buildMolluskShape(true);
+  const footColor = '#8fa3b8';
+  const palette = {
+    O: '#0d0a1f', Y: footColor, Z: darkenColor(footColor, 0.35),
+    K: '#4a2f8f', D: '#00e5ff', S: '#d8c8ff',
+    A: '#0d0a1f', E: '#00e5ff'
+  };
+  const cellPx = (radius * 2.7) / grid.length;
+  drawCharGridSprite(ctx2d, cx, cy, cellPx, grid, palette, facingLeft);
+}
+
+// Inimigo voador (mosquito): corpo oval pequeno + asas translúcidas -
+// só torres com asas (canHitFlying) conseguem mirar nele.
+const flyShapeCache = { grid: null };
+function buildFlyShape() {
+  if (flyShapeCache.grid) return flyShapeCache.grid;
+  const W = 13, H = 12;
+  const grid = newCharGrid(W, H);
+  ellipseFill(grid, 6, 6, 4.6, 4.0, 'O');
+  ellipseFill(grid, 6, 6, 3.5, 3.0, 'Y');
+  ellipseFill(grid, 4, 4.5, 1.0, 1.0, 'E');
+  ellipseFill(grid, 8, 4.5, 1.0, 1.0, 'E');
+  flyShapeCache.grid = grid;
+  return grid;
+}
+function drawFlySprite(ctx2d, cx, cy, radius, color, facingLeft) {
+  const grid = buildFlyShape();
+  const cellPx = (radius * 2.4) / grid.length;
+  const totalW = grid[0].length * cellPx, totalH = grid.length * cellPx;
+  ctx2d.save();
+  ctx2d.translate(cx, cy);
+  if (facingLeft) ctx2d.scale(-1, 1);
+  drawWingsBlob(ctx2d, cellPx, 'rgba(255,255,255,0.6)', grid[0].length, grid.length);
+  ctx2d.translate(-totalW / 2, -totalH / 2);
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      const ch = grid[r][c];
+      if (ch === '.') continue;
+      ctx2d.fillStyle = ch === 'O' ? '#1a1a1a' : (ch === 'E' ? '#0d0d0d' : color);
+      ctx2d.fillRect(Math.round(c * cellPx), Math.round(r * cellPx), Math.ceil(cellPx), Math.ceil(cellPx));
+    }
+  }
+  ctx2d.restore();
+}
+
+/* ============================================================
+   TOWER_DEFS - 10 torres x 3 caminhos x 5 tiers (estilo BTD6)
+   ============================================================
+   effects aceitos (todos opcionais, acumulam por tier comprado):
+   damageMult, damageAdd, rangeAdd, fireRateMult (multiplica cooldown,
+   <1 = mais rápido), splashAdd, projectileSpeedAdd, multiHitAdd,
+   critChanceAdd, critMult, poison:{dps,duration}, slowEffect:{factor,duration},
+   stunDuration, knockbackPx, markApplies:{mult,duration}, bonusVsEliteMult,
+   bonusVsSnailMult, executeChance, executeHpFrac, coinPerKillBonus, coinOnHit,
+   incomeBonus, healPerWave, auraFireRateMult, auraRangeAdd, auraRadius,
+   costReductionPct, enemySlowAuraFactor, enemySlowAuraRadius.
+   Tiers 3/4/5 do Caminho 2 (índice 1) podem ter "ability" (nome/desc/cooldown);
+   o efeito de fato é resolvido em ABILITY_HANDLERS por nível (3, 4 ou 5).
+*/
+function t(name, cost, desc, effects, ability) {
+  return { name, cost, desc, effects: effects || {}, ability: ability || null };
+}
+
+const TOWER_DEFS = {
+  // ============================================================ GAFANHOTO
+  gafanhoto: {
+    label: 'Gafanhoto', template: 'grasshopper', baseCost: 20,
+    baseStats: { range: 95, fireRate: 0.6, damage: 10, splash: 0, projectileSpeed: 400 },
+    basePalette: { B: '#8bc34a' },
+    paths: [
+      {
+        name: 'Caminho 1: Hero Mode', color: '#1aff66',
+        t5Special: {
+          overlay: 'visor',
+          palette: { B: '#c3c8cc', O: '#141414', H: '#9aa0a6', J: '#4b5056', L: '#4b5056', M: '#39ff14', V: '#39ff14', A: '#1e1e1e' }
+        },
+        tiers: [
+          t('Salto Veloz', 28, '+20% de velocidade de ataque. Antenas ficam mais longas com pontas verdes neon.', { fireRateMult: 0.8 }),
+          t('Impacto de Salto', 58, 'Ataques geram dano de área curto ao impactar. Ganha ombreiras de quitina verde-escuro.', { splashAdd: 22 }),
+          t('Chute do Inseto', 120, 'Triplica o dano contra alvos únicos. Pernas traseiras ganham espinhos mecânicos avermelhados.', { damageMult: 3 }),
+          t('Moto-Gafanhoto', 250, 'Ataques extremamente rápidos em cadeia. Placas metálicas pretas e verdes cobrem o corpo.', { fireRateMult: 0.55 }),
+          t('Grasshopper Zero-One', 650, 'Habilidade passiva de dano: devasta alvos únicos, elites e caracóis. Armadura prateada reluzente com viseira e detalhes verde-neon.', { damageMult: 2, bonusVsEliteMult: 2.5, bonusVsSnailMult: 2 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Gafanhoto-do-Deserto', color: '#d2b45c',
+        t5Special: { palette: { B: '#8a6a1a', M: '#ffcc33', H: '#6b5215' } },
+        tiers: [
+          t('Apetite Voraz', 25, '+moedas a cada abate. Corpo ganha tom amarelo-areia.', { coinPerKillBonus: 0.4 }),
+          t('Enxame Devorador', 55, 'Gera moedas diretamente ao atingir qualquer inimigo. Asas semi-abertas vibrando.', { coinOnHit: 0.3 }),
+          t('Nuvem de Gafanhotos', 120, 'HABILIDADE: ativa uma nuvem que rouba moedas das lesmas na pista. Aura amarelada de poeira.',
+            {}, { name: 'Nuvem de Gafanhotos', desc: 'Rouba moedas de todos os inimigos vivos por alguns segundos.', cooldown: 22 }),
+          t('Praga dos Campos', 250, 'Reduz o custo de upgrades de torres vizinhas em 15%. Mini-gafanhotos sobrevoam a torre.',
+            { costReductionPct: 0.15, auraRadius: 130 }, { name: 'Nuvem de Gafanhotos', desc: 'Nuvem maior, recarrega mais rápido.', cooldown: 17 }),
+          t('Apocalipse do Enxame', 500, 'Limpa a tela de inimigos fracos e gera uma fortuna em ouro. Corpo dourado-queimado.',
+            {}, { name: 'Apocalipse do Enxame', desc: 'Nuvem devastadora: rouba muito mais moedas e mata lesmas fracas.', cooldown: 14 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Gafanhoto-Pedra', color: '#8a8378',
+        t5Special: { overlay: 'horn', palette: { B: '#5a5650', M: '#ff6f00', J: '#3a3730', N: '#8d6e63' } },
+        tiers: [
+          t('Pernas de Aço', 28, '+alcance e dano de perfuração. Patas mais grossas, tom cinza-escuro.', { rangeAdd: 25, damageAdd: 2 }),
+          t('Ondas de Choque', 60, 'Ataques atordoam o alvo por 0.5s. Carapaça com textura de pedra.', { stunDuration: 0.5 }),
+          t('Pisoteio Sísmico', 125, 'Atordoamento passa a afetar uma área. Joelhos reforçados com placas rochosas.', { splashAdd: 45, stunDuration: 0.8 }),
+          t('Carapaça Bética', 260, 'Aura passiva reduz a velocidade dos inimigos próximos em 30%. Visual de monólito de rocha.', { enemySlowAuraFactor: 0.7, enemySlowAuraRadius: 110 }),
+          t('Titan do Triássico', 520, 'Impactos empurram lesmas e caracóis de volta pelo caminho. Rachaduras brilham em laranja.', { knockbackPx: 45, stunDuration: 1.2, damageMult: 1.6 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ MARIPOSA
+  mariposa: {
+    label: 'Mariposa', template: 'moth', baseCost: 20, canHitFlying: true,
+    baseStats: { range: 150, fireRate: 0.22, damage: 4, splash: 0, projectileSpeed: 520 },
+    basePalette: { B: '#c9a3ff' },
+    paths: [
+      {
+        name: 'Caminho 1: Mothra', color: '#ff5252',
+        t5Special: {
+          overlay: 'mothra',
+          palette: { B: '#1a1512', Q: '#e8720c', R: '#c1272d', X: '#0d0d0d', T: '#ff8f3c', C: '#c9a876', A: '#1a1512' }
+        },
+        tiers: [
+          t('Pó de Vento', 30, 'Aumenta alcance e velocidade de mira. Asas ganham bordas alaranjadas.', { rangeAdd: 30, projectileSpeedAdd: 80 }),
+          t('Lente Solar', 60, 'O raio atinge mais um alvo. Pequeno cristal luminoso na testa.', { multiHitAdd: 1 }),
+          t('Feixe Prismático', 125, 'Aumenta bastante o dano focado. Asas vermelhas e douradas estilo Mothra.', { damageMult: 2.4 }),
+          t('Guardiã das Asas', 260, 'O raio cobre uma faixa maior da pista. Olhos hipnóticos nas asas.', { multiHitAdd: 2, splashAdd: 15 }),
+          t('Mothra, a Deusa Titã', 520, 'Mega raio divino + aura de dano para torres vizinhas. Asas pretas com padrão laranja e "olho" carmesim, corpo bege segmentado.', { damageMult: 2, auraFireRateMult: 0.85, auraRangeAdd: 20 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Bicho-da-Seda', color: '#f5f5f0',
+        t5Special: { palette: { B: '#e8e8f0', C: '#7986cb' } },
+        tiers: [
+          t('Pó Cego', 30, 'Desacelera lesmas no alcance. Corpo felpudo esbranquiçado.', { slowEffect: { factor: 0.85, duration: 1.5 } }),
+          t('Casulo de Seda', 60, 'Prende periodicamente o alvo. Fios de seda nos braços/tórax.', { stunDuration: 0.6 }),
+          t('Tempestade de Seda', 125, 'HABILIDADE: paralisa todas as lesmas da tela. Asas macias como algodão.',
+            {}, { name: 'Tempestade de Seda', desc: 'Paralisa todos os inimigos vivos por alguns segundos.', cooldown: 24 }),
+          t('Metamorfose Rápida', 260, 'Reduz o tempo de recarga da habilidade pela metade. Casulo de energia no dorso.',
+            {}, { name: 'Tempestade de Seda', desc: 'Recarga bem mais rápida.', cooldown: 14 }),
+          t('Seda do Inverno Eterno', 520, 'Paralisia mais longa e dobra o dano recebido pelas lesmas afetadas. Asas prateadas.',
+            {}, { name: 'Seda do Inverno Eterno', desc: 'Paralisia longa + marca todos com dano dobrado.', cooldown: 20 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Mariposa-Caveira', color: '#5e1675',
+        t5Special: { overlay: 'mothra', palette: { B: '#0a0a0a', Q: '#1a0a24', R: '#eeeeee', X: '#000000', T: '#4a148c', C: '#4a148c' } },
+        tiers: [
+          t('Visão Noturna', 30, 'Detecta inimigos escondidos. Olhos vermelhos brilhantes.', { rangeAdd: 15 }),
+          t('Pólen Tóxico', 60, 'Injeta veneno contínuo. Névoa roxa gotejando das asas.', { poison: { dps: 6, duration: 3 } }),
+          t('Mariposa da Morte', 125, 'Chance de acerto crítico. Caveira marcada no dorso.', { critChance: 0.3, critMult: 2.5 }),
+          t('Névoa Obscura', 260, 'Veneno permanente muito mais forte. Asas pretas com roxo escuro.', { poison: { dps: 14, duration: 4 } }),
+          t('Anjo da Morte', 520, 'Chance de executar instantaneamente lesmas comuns. Mariposa macabra preta absoluta.', { executeChance: 0.22, executeHpFrac: 0.25 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ FORMIGA
+  formiga: {
+    label: 'Formiga', template: 'ant', baseCost: 12,
+    baseStats: { range: 80, fireRate: 0.4, damage: 5, splash: 0, projectileSpeed: 400 },
+    basePalette: { B: '#5d1a0a' },
+    paths: [
+      {
+        name: 'Caminho 1: Formiga-Correição', color: '#7a1010',
+        t5Special: { palette: { B: '#1a1a1a', M: '#c62828', H: '#8d8d8d' } },
+        tiers: [
+          t('Mandíbula Dupla', 15, 'Atinge +1 alvo por ataque. Mandíbulas levemente aumentadas.', { multiHitAdd: 1 }),
+          t('Carga do Exército', 32, 'Aumenta a velocidade dos tiros. Tórax vermelho-escuro reforçado.', { fireRateMult: 0.75 }),
+          t('Soldado de Elite', 68, 'Muito mais dano contra Caracóis. Mandíbulas pretas gigantes.', { bonusVsSnailMult: 1.8 }),
+          t('Lança-Mandíbulas', 145, 'Projéteis perfurantes cortam múltiplos alvos. Quitina negra reforçada.', { multiHitAdd: 2 }),
+          t('Formiga Cortadeira Titã', 290, 'Dano devastador que decapita lesmas médias. Carapaça de combate preta e vermelha.', { damageMult: 2.6, executeChance: 0.15, executeHpFrac: 0.2 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Formiga-de-Fogo', color: '#ff5722',
+        t5Special: { overlay: 'stripes', palette: { B: '#ff6f00', M: '#fff176', T: '#ffca28' } },
+        tiers: [
+          t('Gotas Cáusticas', 15, 'Tiros aplicam corrosão leve. Abdômen avermelhado.', { poison: { dps: 3, duration: 2 } }),
+          t('Jato Químico', 32, 'Esguichos de ácido em curto alcance. Ponta do abdômen alaranjada.', { poison: { dps: 6, duration: 3 } }),
+          t('Spray de Ácido', 68, 'HABILIDADE: banha a pista em ácido. Corpo vermelho-fogo reluzente.',
+            {}, { name: 'Spray de Ácido', desc: 'Aplica veneno forte + fragilidade a todos os inimigos por um tempo.', cooldown: 20 }),
+          t('Fusão de Armadura', 145, 'O ácido remove a defesa de caracóis e elites. Gotas de magma na cauda.',
+            { bonusVsSnailMult: 1.5 }, { name: 'Spray de Ácido', desc: 'Recarga mais rápida.', cooldown: 14 }),
+          t('Formiga-de-Fogo Atômica', 290, 'Vaporiza a armadura de todos e incendeia a pista. Corpo em chamas contínuas.',
+            { poison: { dps: 12, duration: 5 } }, { name: 'Formiga-de-Fogo Atômica', desc: 'Ácido muito mais potente e duradouro.', cooldown: 18 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Formiga-Cortadeira', color: '#c9a86a',
+        t5Special: { overlay: 'horn', palette: { B: '#c9a86a', N: '#ffd700', M: '#fff3c4' } },
+        tiers: [
+          t('Guarda Real', 15, '+alcance para torres vizinhas. Segura uma pequena folha.', { auraRangeAdd: 12, auraRadius: 110 }),
+          t('Feromônio de Trabalho', 32, '+velocidade de ataque para aliados próximos. Aura verde suave.', { auraFireRateMult: 0.88, auraRadius: 110 }),
+          t('Invocar Operárias', 68, 'Operárias reforçam a economia da colônia. Abdômen maior, coroa de folhas.', { incomeBonus: 1.5 }),
+          t('Aura da Colônia', 145, 'Duplica os buffs aplicados em aliados. Vestida como nobreza da colônia.', { auraFireRateMult: 0.78, auraRangeAdd: 22, auraRadius: 130 }),
+          t('Rainha da Colônia', 290, 'Fortaleza que dobra a cadência de todos os insetos próximos. Rainha gigante coroada.', { auraFireRateMult: 0.6, auraRangeAdd: 30, auraRadius: 150 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ ABELHA
+  abelha: {
+    label: 'Abelha', template: 'roundBug', baseCost: 18, canHitFlying: true,
+    overlay: 'stripes', wings: true, wingsColor: 'rgba(255,255,255,0.55)', stinger: true,
+    baseStats: { range: 100, fireRate: 0.5, damage: 9, splash: 0, projectileSpeed: 450 },
+    basePalette: { B: '#f2b100' },
+    paths: [
+      {
+        name: 'Caminho 1: Vespão-Mandarim', color: '#c65a11',
+        t5Special: { overlay: 'stripes', palette: { B: '#2a1e08', T: '#ff3d00', M: '#ffab00' } },
+        tiers: [
+          t('Ferrão Afiado', 25, 'Tiros perfuram +1 alvo. Listras amarelas e pretas mais vivas.', { multiHitAdd: 1 }),
+          t('Veneno Neurotóxico', 50, 'Injeta veneno contínuo. Ferrão mais longo e afiado.', { poison: { dps: 5, duration: 3 } }),
+          t('Vespão Caçador', 105, 'Muito mais dano contra elites e caracóis. Cabeça alaranjada tom vespão.', { bonusVsEliteMult: 2, bonusVsSnailMult: 2 }),
+          t('Injeção Letal', 220, 'Disparos extremamente rápidos. Asas escuras, listras dominantes.', { fireRateMult: 0.6 }),
+          t('Giant Hornet', 440, 'Ferrões gigantes que atravessam a pista inteira. Olhar ameaçador.', { damageMult: 2.4, multiHitAdd: 2 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Abelha-Rainha', color: '#ffd54f',
+        t5Special: { overlay: 'horn', palette: { B: '#ffb300', N: '#fff176', M: '#fff8e1' } },
+        tiers: [
+          t('Zumbido Agitado', 25, '+cadência para vizinhos. Tom amarelo-ouro vibrante.', { auraFireRateMult: 0.9, auraRadius: 110 }),
+          t('Colméia Organizada', 50, 'Reduz custo de upgrades no raio de alcance. Favo de mel flutuante.', { costReductionPct: 0.12, auraRadius: 110 }),
+          t('Enxame de Operárias', 105, 'HABILIDADE: patrulhamento aéreo que ataca tudo por um tempo. Coroa de néctar.',
+            {}, { name: 'Enxame de Operárias', desc: 'Um enxame ataca todos os inimigos vivos por alguns segundos.', cooldown: 22 }),
+          t('Geleia Real', 220, '+alcance extra durante a ativação. Jarro de geleia real ao lado.',
+            { auraRangeAdd: 15 }, { name: 'Enxame de Operárias', desc: 'Enxame mais forte e recarga menor.', cooldown: 16 }),
+          t('Vespa Queen', 440, 'Exército permanente de operárias cobrindo as saídas. Rainha majestosa em mantos de mel.',
+            { auraFireRateMult: 0.8, auraRadius: 150 }, { name: 'Vespa Queen', desc: 'Enxame devastador e duradouro.', cooldown: 20 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Abelha-Melipona', color: '#e8890c',
+        t5Special: { overlay: 'stripes', palette: { B: '#8d5a00', M: '#ffca28', T: '#5d3a00' } },
+        tiers: [
+          t('Mel Pegajoso', 25, 'Tiros aplicam lentidão leve. Gotas de mel caindo do abdômen.', { slowEffect: { factor: 0.8, duration: 1.5 } }),
+          t('Poça de Mel', 50, 'Lentidão bem mais forte. Abdômen arredondado e dourado.', { slowEffect: { factor: 0.65, duration: 2 } }),
+          t('Favo-Armadilha', 105, 'Paralisa caracóis brevemente. Asas em tom âmbar brilhante.', { stunDuration: 1.5 }),
+          t('Mel Cárneo', 220, 'Poças causam dano contínuo. Pote de mel transbordando.', { poison: { dps: 6, duration: 3 } }),
+          t('Golem de Mel', 440, 'Pântano de mel permanente ao redor. Fusão com um golem dourado.', { enemySlowAuraFactor: 0.55, enemySlowAuraRadius: 120 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ ARANHA
+  aranha: {
+    label: 'Aranha', template: 'spider', baseCost: 22,
+    baseStats: { range: 70, fireRate: 1.0, damage: 16, splash: 0, projectileSpeed: 320 },
+    basePalette: { B: '#2b2b2b' },
+    paths: [
+      {
+        name: 'Caminho 1: Aranha-Armadeira', color: '#b23a1a',
+        t5Special: { palette: { B: '#4a2f1a', F: '#ff1744', M: '#2a1a0f' } },
+        tiers: [
+          t('Quelíceras Afiadas', 22, '+dano base. Presas frontais destacadas.', { damageMult: 1.25 }),
+          t('Salto Noturno', 48, '+alcance. Patas dianteiras erguidas.', { rangeAdd: 20 }),
+          t('Caçadora de Sombras', 100, 'Chance de crítico alto. Postura de bote, presas vermelhas.', { critChance: 0.2, critMult: 3 }),
+          t('Presas Fatais', 210, 'Críticos causam mini-explosão. Marca em "V" amarela.', { splashAdd: 20 }),
+          t('Tarântula-Golias', 420, 'Crítico quase garantido, com esmagamento em área. Aranha gigante peluda.', { critChance: 0.5, damageMult: 1.5, splashAdd: 35 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Aranha-Alçapão', color: '#4a3520',
+        t5Special: { palette: { B: '#ffd700', M: '#fff9c4', F: '#8d6e00' } },
+        tiers: [
+          t('Teia Reforçada', 22, 'Aumenta a duração da lentidão. Patas escuras e curtas.', { slowEffect: { factor: 0.5, duration: 2.5 } }),
+          t('Teia em Rede', 48, 'Prende múltiplas lesmas. Camuflada com pedras e folhas.', { multiHitAdd: 1 }),
+          t('Alçapão', 100, 'HABILIDADE: puxa e engole lesmas comuns instantaneamente. Fossa esculpida sob a torre.',
+            {}, { name: 'Alçapão', desc: 'Mata instantaneamente várias lesmas fracas próximas à torre.', cooldown: 22 }),
+          t('Teia Eletrizada', 210, 'Agora também engole Caracóis. Teias com brilho estático.',
+            {}, { name: 'Alçapão', desc: 'Também engole caracóis. Recarga menor.', cooldown: 16 }),
+          t('Golden Orb Weaver', 420, 'Engole o maior inimigo da tela num casulo de seda. Aranha teia-de-ouro.',
+            {}, { name: 'Golden Orb Weaver', desc: 'Engole vários inimigos + o mais forte da tela.', cooldown: 20 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Viúva-Negra', color: '#8b0000',
+        t5Special: { overlay: 'hourglass', palette: { B: '#0d0d0d', R: '#ff1744', F: '#4a0000' } },
+        tiers: [
+          t('Micro-Dose', 22, 'Veneno leve. Corpo preto lustroso.', { poison: { dps: 4, duration: 3 } }),
+          t('Veneno Necrótico', 48, 'Veneno mais forte. Ampulheta vermelha fraca.', { poison: { dps: 8, duration: 4 } }),
+          t('Viúva-Negra', 100, 'Veneno acumula bastante dano. Ampulheta bem definida.', { poison: { dps: 14, duration: 5 } }),
+          t('Ampulheta Carmim', 210, 'Veneno derrete a vida rapidamente. Aura vermelha e fumaça negra.', { poison: { dps: 22, duration: 5 } }),
+          t('Mãe da Ninhada', 420, 'Veneno letal com chance de execução. Viúva-negra colossal.', { poison: { dps: 30, duration: 6 }, executeChance: 0.1, executeHpFrac: 0.1 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ BESOURO
+  besouro: {
+    label: 'Besouro', template: 'roundBug', baseCost: 15,
+    baseStats: { range: 85, fireRate: 0.7, damage: 7, splash: 0, projectileSpeed: 380 },
+    basePalette: { B: '#7a5a2e' },
+    paths: [
+      {
+        name: 'Caminho 1: Besouro-Bombardeiro', color: '#3f6fa8',
+        t5Special: { palette: { B: '#2c3e50', M: '#76ff03', H: '#1c2833' } },
+        tiers: [
+          t('Casca Dura', 20, 'Aumenta velocidade do projétil. Tom azul metálico.', { projectileSpeedAdd: 100 }),
+          t('Esferas de Detrito', 45, 'Adiciona explosão curta. Patas traseiras alaranjadas.', { splashAdd: 30 }),
+          t('Besouro-Rinoceronte Bombardeiro', 95, 'Pedras explosivas pesadas. Mini canhão químico no dorso.', { splashAdd: 50, damageMult: 1.6 }),
+          t('Canhão Obus', 190, 'Alcance praticamente global. Blindagem pesada militar.', { rangeAdd: 850 }),
+          t('Bombardeiro Atômico', 380, 'Crateras em chamas queimando a pista. Reator verde radiativo no tórax.', { splashAdd: 90, damageMult: 1.8, poison: { dps: 10, duration: 3 } })
+        ]
+      },
+      {
+        name: 'Caminho 2: Besouro-Rinoceronte', color: '#5a4a3a',
+        t5Special: {
+          overlay: 'horn',
+          palette: { B: '#37474f', O: '#101418', H: '#455a64', N: '#e0e0e0', L: '#101418', M: '#263238' }
+        },
+        tiers: [
+          t('Escudo de Quitina', 20, '+velocidade de ataque. Chifre frontal pequeno.', { fireRateMult: 0.87 }),
+          t('Bater de Asas', 45, 'Empurra lesmas pequenas a cada tiro. Asas entreabertas.', { knockbackPx: 15 }),
+          t('Carga de Chifre', 95, 'HABILIDADE: atravessa a pista empurrando tudo pra trás. Chifre curvo robusto.',
+            {}, { name: 'Carga de Chifre', desc: 'Empurra e atordoa todos os inimigos vivos.', cooldown: 20 }),
+          t('Chifre de Titânio', 190, 'A carga causa dano massivo. Chifre com placas prateadas.',
+            { damageMult: 1.4 }, { name: 'Carga de Chifre', desc: 'Empurrão mais forte, recarga menor.', cooldown: 15 }),
+          t('Hercules Mech Beetle', 380, 'Empurra TUDO da tela e atordoa por muito tempo. Mecha gigante com chifre duplo.',
+            {}, { name: 'Hercules Mech Beetle', desc: 'Empurrão e atordoamento devastadores em toda a tela.', cooldown: 18 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Escaravelho-Sagrado', color: '#d4af37',
+        t5Special: { overlay: 'horn', palette: { B: '#d4af37', M: '#ff6f00', N: '#fff176' } },
+        tiers: [
+          t('Benção Solar', 20, '+moedas passivas. Brilho amarelado na carapaça.', { incomeBonus: 1 }),
+          t('Símbolo de Ra', 45, 'Dano mágico extra. Escaravelho folheado a ouro fraco.', { damageMult: 1.3 }),
+          t('Escaravelho Solstício', 95, 'Orbes solares incendeiam inimigos. Carrega um orbe brilhante.', { splashAdd: 25, damageMult: 1.3 }),
+          t('Pirâmide de Luz', 190, 'Feixes de luz contínuos. Inscrições hieróglifas brilhantes.', { multiHitAdd: 2 }),
+          t('Anubis Beetle', 380, 'Converte inimigos em ouro e regenera vida por onda. Escaravelho de ouro egípcio.', { coinPerKillBonus: 2, damageMult: 1.6, healPerWave: 1 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ JOANINHA
+  joaninha: {
+    label: 'Joaninha', template: 'roundBug', overlay: 'spots', baseCost: 16,
+    baseStats: { range: 90, fireRate: 0.8, damage: 10, splash: 15, projectileSpeed: 380 },
+    basePalette: { B: '#e53935' },
+    paths: [
+      {
+        name: 'Caminho 1: Joaninha-Asiática', color: '#ff8f00',
+        t5Special: { overlay: 'spots', palette: { B: '#616161', X: '#263238', M: '#9e9e9e' } },
+        tiers: [
+          t('Sete Pontos', 18, '+velocidade de ataque. Tom alaranjado com pontos pretos.', { fireRateMult: 0.83 }),
+          t('Disparo Duplo', 40, 'Atinge +1 alvo por disparo. Asas levemente abertas.', { multiHitAdd: 1 }),
+          t('Joaninha Asiática', 85, 'Rajadas rápidas em vários alvos. Marcas pretas cobrindo o casco.', { multiHitAdd: 3, fireRateMult: 0.85 }),
+          t('Tempestade de Pistas', 180, 'Saraivada em leque amplo. Asas totalmente abertas.', { multiHitAdd: 2, splashAdd: 10 }),
+          t('Gatling-Bug 14-Pontos', 360, 'Fuzilamento contínuo e imparável. Estilo Mecha-Gatling.', { fireRateMult: 0.5, multiHitAdd: 3 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Joaninha-de-Sete-Pontos', color: '#ff3d3d',
+        t5Special: { overlay: 'spots', palette: { B: '#ffd700', X: '#ff4081', M: '#00e5ff' } },
+        tiers: [
+          t('Amuleto 4 Folhas', 18, 'Chance de dar 3x dano. Vermelho rubi vibrante.', { critChance: 0.1, critMult: 3 }),
+          t('Trevo Abençoado', 40, 'Mais moedas por abate. Trevo de 4 folhas na carapaça.', { coinPerKillBonus: 1.2 }),
+          t('Rolada de Dado', 85, 'HABILIDADE: efeito aleatório poderoso. 7 bolinhas alinhadas.',
+            {}, { name: 'Rolada de Dado', desc: 'Efeito aleatório: moedas, dano em área, congelamento ou cura.', cooldown: 22 }),
+          t('Jackpot!', 180, 'Recarga da habilidade bem menor. Brilho dourado constante.',
+            {}, { name: 'Rolada de Dado', desc: 'Recarga bem menor.', cooldown: 14 }),
+          t('Joaninha dos Sete Raios', 360, 'Sempre resultados bons + moedas extras. Joaninha divina com aura de arco-íris.',
+            { critChance: 0.35 }, { name: 'Rolada de Dado Divina', desc: 'Sempre bons resultados, com bônus de moedas garantido.', cooldown: 18 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Joaninha-Espinhosa', color: '#6b8e23',
+        t5Special: { overlay: 'spots', palette: { B: '#4a0000', X: '#76ff03', M: '#ff1744' } },
+        tiers: [
+          t('Secreção Amarga', 18, '+dano base. Pequenos sulcos na quitina.', { damageAdd: 3 }),
+          t('Fluidos Cáusticos', 40, 'Dano passivo de ácido. Fumaça esverdeada nas laterais.', { poison: { dps: 4, duration: 2 } }),
+          t('Joaninha Espinhosa', 85, 'Estilhaços em área maior. Espinhos amarelos nas asas.', { splashAdd: 35 }),
+          t('Corrosão Total', 180, 'Remove a proteção de caracóis. Espinhos grandes e poças de ácido.', { bonusVsSnailMult: 1.7 }),
+          t('Supernova Vermelha', 360, 'Pulsos de ácido que limpam lesmas fracas. Coberta de espinhos de cristal.', { splashAdd: 70, poison: { dps: 10, duration: 3 } })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ LIBÉLULA
+  libelula: {
+    label: 'Libélula', template: 'dragonfly', baseCost: 20, canHitFlying: true,
+    baseStats: { range: 110, fireRate: 0.35, damage: 7, splash: 0, projectileSpeed: 480 },
+    basePalette: { B: '#26a69a' },
+    paths: [
+      {
+        name: 'Caminho 1: Libélula-Imperador', color: '#33cc99',
+        t5Special: { palette: { B: '#00e5ff', C: '#ffffff' } },
+        tiers: [
+          t('Visão Facetada 360°', 25, 'Alcance enorme. Olhos grandes e brilhantes.', { rangeAdd: 30 }),
+          t('Asas Duplas', 52, 'Ataca +1 alvo simultâneo. Asas duplas bem abertas.', { multiHitAdd: 1 }),
+          t('Libélula Imperador', 108, 'Ataca vários alvos ao mesmo tempo. Corpo verde-alface, abdômen azul-celeste.', { multiHitAdd: 2 }),
+          t('Caçadora Mach-1', 225, 'Velocidade extrema, muitos alvos. Lâminas de energia azuladas.', { multiHitAdd: 3, fireRateMult: 0.7 }),
+          t('Caçadora Mach-5', 450, 'Fatia dezenas de lesmas por segundo. Asas como sabres de luz.', { multiHitAdd: 5, damageMult: 1.6 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Libélula-Helicóptero', color: '#556b2f',
+        t5Special: { palette: { B: '#0d0d0d', C: '#37474f' } },
+        tiers: [
+          t('Voo Rasante', 25, 'Projéteis muito mais rápidos. Asas longas estilo hélice.', { projectileSpeedAdd: 150 }),
+          t('Miragem no Ar', 52, 'Mantém dano total à distância. Tom camuflado militar.', { damageMult: 1.15 }),
+          t('Rasante de Reconhecimento', 108, 'HABILIDADE: cruza o mapa causando dano em área. Pontas das asas marcadas em branco.',
+            {}, { name: 'Rasante de Reconhecimento', desc: 'Bombardeio: causa dano pesado a todos os inimigos vivos.', cooldown: 22 }),
+          t('Esquadrão Aéreo', 225, 'Invoca mini-libélulas de apoio. Turbinas leves no tórax.',
+            { multiHitAdd: 1 }, { name: 'Rasante de Reconhecimento', desc: 'Dano maior, recarga menor.', cooldown: 15 }),
+          t('Stealth Dragonfly', 450, 'Bombardeio tático devastador. Estilo caça invisível com radar no dorso.',
+            { damageMult: 1.3 }, { name: 'Stealth Dragonfly', desc: 'Bombardeio devastador em toda a tela.', cooldown: 18 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Libélula-Azul-Elétrica', color: '#2979ff',
+        t5Special: { palette: { B: '#2979ff', C: '#ffffff' } },
+        tiers: [
+          t('Asas Cintilantes', 25, 'Dano estático leve. Corpo com tom azul estático.', { damageAdd: 3 }),
+          t('Arco Elétrico', 52, 'O raio salta para outro alvo. Faíscas correndo pelas asas.', { multiHitAdd: 1 }),
+          t('Libélula Azul-Elétrica', 108, 'Tiros paralisam brevemente. Corpo azul elétrico com listras pretas.', { stunDuration: 0.2 }),
+          t('Alta Tensão', 225, 'Raios encadeiam em várias lesmas. Aura elétrica constante.', { multiHitAdd: 3, stunDuration: 0.25 }),
+          t('Zeus Dragonfly', 450, 'Raios globais por toda a pista. Libélula de plasma azul puro.', { multiHitAdd: 5, stunDuration: 0.3, damageMult: 1.4 })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ VAGA-LUME
+  vagalume: {
+    label: 'Vaga-Lume', template: 'firefly', baseCost: 18, canHitFlying: true,
+    baseStats: { range: 100, fireRate: 0.9, damage: 6, splash: 0, projectileSpeed: 400 },
+    basePalette: { B: '#4a4a2a', X: '#ffee58' },
+    paths: [
+      {
+        name: 'Caminho 1: Vaga-Lume-Caçador', color: '#39ff14',
+        t5Special: { palette: { B: '#1b1b1b', H: '#2e2e2e', X: '#39ff14' } },
+        tiers: [
+          t('Foco de Luz', 22, '+alcance do raio. Lanterna traseira verde fraca.', { rangeAdd: 35 }),
+          t('Lente Amplificadora', 46, 'Dano de perfuração maior. Lente de cristal na cauda.', { multiHitAdd: 1 }),
+          t('Laser Neon', 98, 'Feixe verde brilhante de alto dano. Corpo esguio e aerodinâmico.', { damageMult: 2 }),
+          t('Sobrecarga Térmica', 205, 'O laser aplica queimadura. Cauda com partículas de plasma.', { poison: { dps: 8, duration: 3 } }),
+          t('Canhão de Plasma Neon', 410, 'Mega feixe cortando e incinerando a tela. Canhão de plasma verde brilhante.', { damageMult: 2.2, multiHitAdd: 2 })
+        ]
+      },
+      {
+        name: 'Caminho 2: Vaga-Lume-Solar', color: '#ffd600',
+        t5Special: { palette: { B: '#ffb300', H: '#ffd54f', X: '#fff9c4' } },
+        tiers: [
+          t('Brilho Guia', 22, '+alcance de detecção. Lanterna amarela brilhante.', { rangeAdd: 20 }),
+          t('Farol da Noite', 46, '+alcance de todas as torres na luz. Aura amarela fraca no chão.', { auraRangeAdd: 18, auraRadius: 120 }),
+          t('Sinalizador do Jardim', 98, 'HABILIDADE: ilumina a pista, aumentando a cadência de todas as torres. Abdômen expandido e aceso.',
+            {}, { name: 'Sinalizador do Jardim', desc: 'Todas as torres atacam mais rápido por um tempo.', cooldown: 24 }),
+          t('Aura Solar', 205, 'Torres na luz ganham ainda mais velocidade. Círculo de luz solar permanente.',
+            { auraFireRateMult: 0.83, auraRadius: 130 }, { name: 'Sinalizador do Jardim', desc: 'Buff mais forte, recarga menor.', cooldown: 17 }),
+          t('Supernova do Jardim', 410, 'Explosão de luz dourada que marca todos os inimigos. Corona de luz reluzente.',
+            {}, { name: 'Supernova do Jardim', desc: 'Buff enorme em todas as torres + marca de dano nos inimigos.', cooldown: 18 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Vaga-Lume-Fantasma', color: '#4dd0e1',
+        t5Special: { palette: { B: '#80deea', H: '#b2ebf2', X: '#e0f7fa' } },
+        tiers: [
+          t('Luz Fria', 22, 'Reduz a velocidade dos atingidos. Brilho ciano suave.', { slowEffect: { factor: 0.9, duration: 1.5 } }),
+          t('Fogo-Fátuo', 46, 'Marca espectral: +dano recebido. Corpo semi-transparente grafite.', { markApplies: { mult: 1.3, duration: 3 } }),
+          t('Pulso Espectral', 98, 'Aura que desacelera a área. Lanterna azul turquesa constante.', { enemySlowAuraFactor: 0.75, enemySlowAuraRadius: 100 }),
+          t('Névoa Ciano', 205, 'Névoa mística reduz a vida gradativamente. Fumaça espectral azul.', { poison: { dps: 5, duration: 4 } }),
+          t('Fantasma Imortal', 410, 'Marca de dano altíssimo nos afetados. Vaga-lume translúcido com chama azul turquesa.', { markApplies: { mult: 2.6, duration: 6 } })
+        ]
+      }
+    ]
+  },
+
+  // ============================================================ BORBOLETA
+  borboleta: {
+    label: 'Borboleta', template: 'butterfly', baseCost: 18, canHitFlying: true,
+    baseStats: { range: 130, fireRate: 0.9, damage: 6, splash: 0, projectileSpeed: 420 },
+    basePalette: { B: '#4fc3f7' },
+    paths: [
+      {
+        name: 'Caminho 1: Borboleta-Monarca', color: '#ff5722',
+        t5Special: { overlay: 'mothra', palette: { B: '#d84315', Q: '#ffca28', R: '#fff176', X: '#bf360c', T: '#ff8f3c', C: '#8d4a1a' } },
+        tiers: [
+          t('Pólen Ardente', 25, 'Incendeia o alvo. Asas alaranjadas com bordas pretas.', { poison: { dps: 5, duration: 2 } }),
+          t('Asas da Fênix', 55, 'A queima afeta uma área. Faíscas saindo das asas.', { splashAdd: 25 }),
+          t('Borboleta Vulcânica', 115, 'Ondas de choque flamejantes. Padrão Monarca com chamas ativas.', { splashAdd: 40, damageMult: 1.5 }),
+          t('Tempestade de Chamas', 240, 'Mini tornados de fogo na pista. Asas de magma e brasas.', { poison: { dps: 12, duration: 3 } }),
+          t('Fênix Monarca', 480, 'Corredor de fogo eterno incinerando a horda. Borboleta-Fênix radiante.', { splashAdd: 60, poison: { dps: 18, duration: 4 } })
+        ]
+      },
+      {
+        name: 'Caminho 2: Borboleta-Morpho', color: '#2962ff',
+        t5Special: { overlay: 'mothra', palette: { B: '#1a237e', Q: '#3949ab', R: '#00e5ff', X: '#0d1257', T: '#5c6bc0', C: '#1a1a2e' } },
+        tiers: [
+          t('Padrão Hipnótico', 25, 'Lentidão passiva no alcance. Asas em azul-metálico fraco.', { slowEffect: { factor: 0.85, duration: 1.5 } }),
+          t('Asas Cativantes', 55, 'Alvos marcados tomam mais dano. Brilho prateado nas asas azuis.', { markApplies: { mult: 1.25, duration: 3 } }),
+          t('Hipnose em Massa', 115, 'HABILIDADE: as lesmas andam para trás na pista. Padrão Morpho com espirais de luz.',
+            {}, { name: 'Hipnose em Massa', desc: 'Todos os inimigos vivos andam para trás por um tempo.', cooldown: 24 }),
+          t('Espelho de Ilusões', 240, 'Hipnose mais longa, afeta elites e caracóis. Asas como espelhos azuis.',
+            { bonusVsSnailMult: 1.5, bonusVsEliteMult: 1.5 }, { name: 'Hipnose em Massa', desc: 'Duração maior, recarga menor.', cooldown: 16 }),
+          t('Borboleta Morfo-Atômica', 480, 'Confunde e marca a horda inteira. Borboleta lendária com pulsos hipnóticos.',
+            { markApplies: { mult: 1.6, duration: 5 } }, { name: 'Hipnose Atômica', desc: 'Hipnose longa + marca de dano em todos.', cooldown: 20 })
+        ]
+      },
+      {
+        name: 'Caminho 3: Asa-de-Vidro', color: '#b3e5fc',
+        t5Special: { palette: { B: '#e1f5fe', C: '#4fc3f7' } },
+        tiers: [
+          t('Vento Frio', 25, 'Tiros desaceleram os alvos. Asas transparentes com bordas brancas.', { slowEffect: { factor: 0.7, duration: 2 } }),
+          t('Geada Profunda', 55, 'Congela lesmas pequenas por um instante. Cristais de gelo nas asas.', { stunDuration: 0.5 }),
+          t('Borboleta de Cristal', 115, 'Transforma inimigos em estátuas de gelo. Asas como vidro geladas.', { slowEffect: { factor: 0.4, duration: 2.5 } }),
+          t('Ventania Polar', 240, 'Aura de gelo permanente na tela. Tempestade de neve ao redor.', { enemySlowAuraFactor: 0.65, enemySlowAuraRadius: 120 }),
+          t('Zero Absoluto (Ice Queen)', 480, 'Quase paralisa e desacelera brutalmente a horda. Rainha de Gelo com aura de congelamento.', { slowEffect: { factor: 0.15, duration: 4 }, stunDuration: 1 })
+        ]
+      }
+    ]
+  }
+};
+
+/* ============================================================
+   CROSSPATHING (regra do BTD6: até T5 em UM caminho, até T2 em
+   um SEGUNDO, o terceiro fica bloqueado em 0).
+   ============================================================ */
+function canUpgradePath(levels, idx) {
+  if (levels[idx] >= 5) return false;
+  const next = levels.slice();
+  next[idx]++;
+  const above2 = next.filter(l => l > 2);
+  if (above2.length > 1) return false; // só um caminho pode passar do T2
+  if (above2.length === 1) {
+    const mainIdx = next.findIndex(l => l > 2);
+    const others = next.filter((l, i) => i !== mainIdx);
+    const nonZero = others.filter(l => l > 0).length;
+    if (nonZero > 1) return false; // só um segundo caminho pode ter pontos
+    if (others.some(l => l > 2)) return false; // e esse segundo não passa de T2
+  }
+  return true;
+}
+
+function getDiscountFor(tower) {
+  let discount = 0;
+  for (const src of state.towers) {
+    if (src === tower) continue;
+    const e = src.effects;
+    if (e && e.costReductionPct && Math.hypot(src.x - tower.x, src.y - tower.y) <= (e.auraRadius || 120)) {
+      discount = Math.max(discount, e.costReductionPct);
+    }
+  }
+  return discount;
+}
+
+/* ============================================================
+   HABILIDADES ATIVAS (Caminho 2, T3-T5). Cada handler recebe a
+   torre e o nível atual (3, 4 ou 5) e aplica um efeito real no
+   estado do jogo - alguns são instantâneos, outros duram alguns
+   segundos via state.fieldEffects (processados em update()).
+   ============================================================ */
+const ABILITY_HANDLERS = {
+  besouro: (tower, level) => {
+    const cfg = { 3: { kb: 55, stun: 1.5 }, 4: { kb: 90, stun: 2.5 }, 5: { kb: 220, stun: 5 } }[level];
+    for (const e of state.enemies) {
+      if (e.dead) continue;
+      e.distanceTraveled = Math.max(0, e.distanceTraveled - cfg.kb);
+      applyStun(e, cfg.stun);
+    }
+  },
+  abelha: (tower, level) => {
+    const cfg = { 3: { dur: 6, dps: 8 }, 4: { dur: 8, dps: 14 }, 5: { dur: 10, dps: 22 } }[level];
+    state.fieldEffects.push({ type: 'swarm', until: state.gameTime + cfg.dur, dps: cfg.dps });
+  },
+  mariposa: (tower, level) => {
+    const cfg = { 3: { dur: 3, mark: false }, 4: { dur: 5, mark: false }, 5: { dur: 8, mark: true } }[level];
+    for (const e of state.enemies) {
+      if (e.dead) continue;
+      applyStun(e, cfg.dur);
+      if (cfg.mark) { e.markMultiplier = Math.max(e.markMultiplier, 2); e.markedUntil = Math.max(e.markedUntil, state.gameTime + cfg.dur); }
+    }
+  },
+  formiga: (tower, level) => {
+    const cfg = { 3: { dur: 5, dps: 10 }, 4: { dur: 7, dps: 18 }, 5: { dur: 9, dps: 30 } }[level];
+    state.fieldEffects.push({ type: 'acid', until: state.gameTime + cfg.dur, dps: cfg.dps, mark: 1.3 });
+  },
+  aranha: (tower, level) => {
+    const count = { 3: 3, 4: 5, 5: 7 }[level];
+    const includeSnail = level >= 4;
+    const candidates = state.enemies
+      .filter(e => !e.dead && !e.isElite && !e.isBoss && (includeSnail || !e.isSnail) && Math.hypot(e.x - tower.x, e.y - tower.y) <= tower.range * 2.3)
+      .sort((a, b) => a.hp - b.hp)
+      .slice(0, count);
+    for (const e of candidates) { e.hp = 0; e.dead = true; }
+    if (level >= 5) {
+      let strongest = null;
+      for (const e of state.enemies) { if (!e.dead && !e.isBoss && (!strongest || e.hp > strongest.hp)) strongest = e; }
+      if (strongest) { strongest.hp = 0; strongest.dead = true; }
+    }
+  },
+  joaninha: (tower, level) => {
+    const goodOnly = level >= 5;
+    const options = goodOnly ? ['coins', 'damage', 'coins2'] : ['coins', 'damage', 'freeze', 'heal'];
+    const pick = options[Math.floor(Math.random() * options.length)];
+    if (pick === 'coins') state.coins += 50 + level * 20;
+    else if (pick === 'coins2') state.coins += 120;
+    else if (pick === 'damage') { for (const e of state.enemies) if (!e.dead) e.takeDamage(25 + level * 10); }
+    else if (pick === 'freeze') { for (const e of state.enemies) if (!e.dead) applyStun(e, 2); }
+    else if (pick === 'heal') state.life = Math.min(100, state.life + 5);
+    if (level >= 5) state.coins += 40;
+  },
+  libelula: (tower, level) => {
+    const dmg = { 3: 40, 4: 70, 5: 120 }[level];
+    for (const e of state.enemies) if (!e.dead) e.takeDamage(dmg);
+  },
+  vagalume: (tower, level) => {
+    const cfg = { 3: { dur: 6, mult: 0.75 }, 4: { dur: 8, mult: 0.6 }, 5: { dur: 10, mult: 0.5 } }[level];
+    state.fieldEffects.push({ type: 'towerBuff', until: state.gameTime + cfg.dur, fireRateMult: cfg.mult });
+    if (level >= 5) {
+      for (const e of state.enemies) if (!e.dead) { e.markMultiplier = Math.max(e.markMultiplier, 1.8); e.markedUntil = Math.max(e.markedUntil, state.gameTime + cfg.dur); }
+    }
+  },
+  borboleta: (tower, level) => {
+    const dur = { 3: 3, 4: 4.5, 5: 6 }[level];
+    state.fieldEffects.push({ type: 'hypnosis', until: state.gameTime + dur });
+  },
+  gafanhoto: (tower, level) => {
+    const cfg = { 3: { dur: 5, steal: 1 }, 4: { dur: 7, steal: 2 }, 5: { dur: 10, steal: 3 } }[level];
+    state.fieldEffects.push({ type: 'swarmSteal', until: state.gameTime + cfg.dur, coinsPerSecPerEnemy: cfg.steal });
+    if (level >= 5) {
+      for (const e of state.enemies) { if (!e.dead && !e.isElite && !e.isSnail && e.hp / e.maxHp < 0.12) { e.hp = 0; e.dead = true; } }
+    }
+  }
+};
+
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+const state = {
+  coins: 150,
+  life: 100,
+  wave: 0,
+  waveInProgress: false,
+  enemies: [],
+  towers: [],
+  projectiles: [],
+  spawnQueue: [],
+  spawnTimer: 0,
+  incomeTimer: 1,
+  gameTime: 0,
+  autoplay: false,
+  autoplayTimer: 1.2,
+  paused: false,
+  bestWaveFallback: 0,
+  fieldEffects: [], // habilidades com duração (afetam a tela toda)
+  damageNumbers: [], // números flutuantes de dano
+  selectedTowerType: null,
+  selectedTower: null,
+  gameOver: false,
+  mouse: { x: -100, y: -100, inside: false }
+};
+
+/* ============================================================
+   NÚMEROS DE DANO FLUTUANTES
+   ============================================================ */
+// Chefes resistem bastante a atordoamento/empurrão (senão ficariam presos
+// pra sempre em builds com controle de multidão). Usado tanto por tiros
+// normais quanto por habilidades ativas que afetam a tela toda.
+function applyStun(enemy, duration) {
+  if (enemy.isAntiStun) return;
+  const resist = enemy.isBoss ? 0.35 : 1;
+  enemy.stunUntil = Math.max(enemy.stunUntil || 0, state.gameTime + duration * resist);
+}
+function applyKnockback(enemy, px) {
+  const resist = enemy.isBoss ? 0.35 : 1;
+  enemy.distanceTraveled = Math.max(0, enemy.distanceTraveled - px * resist);
+}
+
+function spawnDamageNumber(x, y, amount, isCrit, isExecute) {
+  // Limite de segurança pra não empilhar centenas de números na tela
+  // quando muita coisa acontece no mesmo frame (ex: habilidades em área).
+  if (state.damageNumbers.length > 60) return;
+  state.damageNumbers.push({
+    x, y, amount: Math.round(amount), isCrit: !!isCrit, isExecute: !!isExecute,
+    born: state.gameTime, vx: (Math.random() - 0.5) * 20
+  });
+}
+function updateDamageNumbers(dt) {
+  state.damageNumbers = state.damageNumbers.filter(n => (state.gameTime - n.born) < 0.7);
+}
+function drawDamageNumbers(ctx2d) {
+  for (const n of state.damageNumbers) {
+    const age = state.gameTime - n.born;
+    const t = age / 0.7;
+    const y = n.y - t * 26;
+    const x = n.x + n.vx * t;
+    ctx2d.save();
+    ctx2d.globalAlpha = Math.max(0, 1 - t);
+    ctx2d.textAlign = 'center';
+    if (n.isExecute) {
+      ctx2d.font = 'bold 13px sans-serif';
+      ctx2d.fillStyle = '#ff1744';
+      ctx2d.fillText('EXECUTADO!', x, y);
+    } else {
+      ctx2d.font = n.isCrit ? 'bold 15px sans-serif' : 'bold 11px sans-serif';
+      ctx2d.fillStyle = n.isCrit ? '#ffd700' : '#ffffff';
+      ctx2d.fillText((n.isCrit ? '💥' : '') + n.amount, x, y);
+    }
+    ctx2d.restore();
+  }
+}
+
+/* ============================================================
+   INIMIGO: LESMA / CARACOL
+   ============================================================ */
+class Slug {
+  constructor(hp, speed, reward, radius, color, isElite, isSnail, isBoss, isFlying, isAntiStun) {
+    this.maxHp = hp; this.hp = hp; this.speed = speed; this.reward = reward;
+    this.radius = radius; this.color = color; this.isElite = !!isElite;
+    this.isSnail = !!isSnail;
+    this.isBoss = !!isBoss;
+    this.isFlying = !!isFlying;
+    this.isAntiStun = !!isAntiStun;
+    this.enraged = false;
+    this.distanceTraveled = 0;
+    const start = getPositionOnPath(0);
+    this.x = start.x; this.y = start.y;
+    this.dead = false; this.leaked = false;
+    this.poisonDps = 0; this.poisonUntil = 0;
+    this.slowFactor = 1; this.slowUntil = 0;
+    this.markMultiplier = 1; this.markedUntil = 0;
+    this.stunUntil = 0;
+    this.hypnotizedUntil = 0;
+    this.auraSlowFactor = 1;
+    this.facingLeft = false;
+    this.bobSeed = Math.random() * Math.PI * 2;
+  }
+
+  update(dt) {
+    const now = state.gameTime;
+    if (this.isAntiStun || now >= this.stunUntil) {
+      let speedMult = (now < this.slowUntil) ? this.slowFactor : 1;
+      speedMult *= this.auraSlowFactor;
+      let delta = this.speed * speedMult * dt;
+      if (now < this.hypnotizedUntil) delta = -delta * 0.6;
+      this.distanceTraveled = Math.max(0, this.distanceTraveled + delta);
+    }
+    this.auraSlowFactor = 1;
+
+    // Chefe entra em fase de fúria (mais rápido) ao passar da metade da vida.
+    if (this.isBoss && !this.enraged && this.hp <= this.maxHp * 0.5) {
+      this.enraged = true;
+      this.speed *= 1.6;
+    }
+
+    if (this.distanceTraveled >= pathTotalLength) {
+      this.leaked = true; this.dead = true;
+      return;
+    }
+    const pos = getPositionOnPath(this.distanceTraveled);
+    const dx = pos.x - this.x;
+    // A arte tem a cabeça no lado esquerdo da grade; então precisamos espelhar
+    // (facingLeft=true) justamente quando o bicho anda pra DIREITA, senão a
+    // cabeça fica "olhando" pro lado contrário ao movimento.
+    if (Math.abs(dx) > 0.01) this.facingLeft = dx > 0;
+    this.x = pos.x; this.y = pos.y;
+    if (now < this.poisonUntil) this.takeDamage(this.poisonDps * dt);
+  }
+
+  takeDamage(dmg) {
+    if (this.dead) return;
+    this.hp -= dmg;
+    if (this.hp <= 0) { this.dead = true; playDeath(); }
+  }
+
+  draw(ctx2d) {
+    const drawY = this.isFlying ? this.y - 16 - Math.sin(state.gameTime * 6 + this.bobSeed) * 3 : this.y;
+
+    if (this.isFlying) {
+      // sombra no chão pra dar noção de altura
+      ctx2d.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx2d.beginPath();
+      ctx2d.ellipse(this.x, this.y, this.radius * 0.8, this.radius * 0.35, 0, 0, Math.PI * 2);
+      ctx2d.fill();
+      drawFlySprite(ctx2d, this.x, drawY, this.radius, this.color, this.facingLeft);
+    } else if (this.isAntiStun) {
+      drawArcaneSnailSprite(ctx2d, this.x, drawY, this.radius, this.facingLeft);
+    } else if (this.isSnail) {
+      drawSnailSprite(ctx2d, this.x, drawY, this.radius, this.color, this.facingLeft);
+    } else {
+      drawSlugSprite(ctx2d, this.x, drawY, this.radius, this.color, this.facingLeft);
+    }
+
+    if (this.isBoss) {
+      const pulse = 0.5 + 0.3 * Math.sin(state.gameTime * 5);
+      ctx2d.save();
+      ctx2d.strokeStyle = this.enraged ? '#ff1744' : '#aa00ff';
+      ctx2d.globalAlpha = pulse;
+      ctx2d.lineWidth = 4;
+      ctx2d.beginPath();
+      ctx2d.ellipse(this.x, drawY, this.radius * 1.6, this.radius + 6, 0, 0, Math.PI * 2);
+      ctx2d.stroke();
+      ctx2d.restore();
+      ctx2d.fillStyle = this.enraged ? '#ff5252' : '#e0b0ff';
+      ctx2d.font = 'bold 11px sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.fillText(this.enraged ? '💢 CHEFE FURIOSO' : '👑 CHEFE', this.x, drawY - this.radius - 24);
+    } else if (this.isElite) {
+      ctx2d.strokeStyle = '#ffd700';
+      ctx2d.lineWidth = 2;
+      ctx2d.beginPath();
+      ctx2d.ellipse(this.x, drawY, this.radius * 1.4, this.radius + 3, 0, 0, Math.PI * 2);
+      ctx2d.stroke();
+    } else if (this.isAntiStun) {
+      ctx2d.strokeStyle = '#00e5ff';
+      ctx2d.lineWidth = 2;
+      ctx2d.beginPath();
+      ctx2d.ellipse(this.x, drawY, this.radius * 1.4, this.radius + 3, 0, 0, Math.PI * 2);
+      ctx2d.stroke();
+      ctx2d.fillStyle = '#00e5ff';
+      ctx2d.font = 'bold 11px sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.fillText('🛡️ imune', this.x, drawY - this.radius - 16);
+    }
+    if (!this.isAntiStun && state.gameTime < this.stunUntil) {
+      ctx2d.fillStyle = '#fff59d';
+      ctx2d.font = 'bold 12px sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.fillText('💫', this.x, drawY - this.radius - 16);
+    }
+    const barW = this.radius * 2.6;
+    ctx2d.fillStyle = '#222';
+    ctx2d.fillRect(this.x - barW / 2, drawY - this.radius - 13, barW, 5);
+    ctx2d.fillStyle = this.isBoss ? '#aa00ff' : (this.isElite ? '#ffd700' : (this.isAntiStun ? '#00e5ff' : (this.isSnail ? '#c17a3a' : (this.isFlying ? '#00acc1' : '#4caf50'))));
+    ctx2d.fillRect(this.x - barW / 2, drawY - this.radius - 13, barW * Math.max(0, this.hp / this.maxHp), 5);
+  }
+}
+
+/* ============================================================
+   TORRE (com 3 caminhos de evolução, estilo BTD6)
+   ============================================================ */
+class Tower {
+  constructor(key, x, y) {
+    this.key = key; this.x = x; this.y = y;
+    this.cooldown = 0; this.angle = 0;
+    this.pathLevels = [0, 0, 0];
+    this.pathPaidCoins = [0, 0, 0];
+    this.investedCoins = TOWER_DEFS[key].baseCost;
+    this.abilityCooldownRemaining = 0;
+    this.ability = null;
+    this.abilityMaxCooldown = 0;
+    this.flickerPhase = Math.random() * 10; // usado só pela luz do vaga-lume
+    this.recompute();
+  }
+
+  recompute() {
+    const def = TOWER_DEFS[this.key];
+    let range = def.baseStats.range, fireRate = def.baseStats.fireRate, damage = def.baseStats.damage;
+    let splash = def.baseStats.splash, projSpeed = def.baseStats.projectileSpeed || 400;
+    let damageMult = 1, fireRateMult = 1, multiHit = 1;
+    const effects = {
+      poison: null, slowEffect: null, stunDuration: 0, knockbackPx: 0, markApplies: null,
+      bonusVsEliteMult: 1, bonusVsSnailMult: 1, critChance: 0, critMult: 2, executeChance: 0, executeHpFrac: 0.15,
+      coinPerKillBonus: 0, coinOnHit: 0, incomeBonus: 0, healPerWave: 0,
+      auraFireRateMult: 1, auraRangeAdd: 0, auraRadius: 120,
+      costReductionPct: 0, enemySlowAuraFactor: 1, enemySlowAuraRadius: 0
+    };
+
+    for (let p = 0; p < 3; p++) {
+      const path = def.paths[p];
+      for (let ti = 0; ti < this.pathLevels[p]; ti++) {
+        const e = path.tiers[ti].effects || {};
+        if (e.damageMult) damageMult *= e.damageMult;
+        if (e.damageAdd) damage += e.damageAdd;
+        if (e.rangeAdd) range += e.rangeAdd;
+        if (e.fireRateMult) fireRateMult *= e.fireRateMult;
+        if (e.splashAdd) splash += e.splashAdd;
+        if (e.projectileSpeedAdd) projSpeed += e.projectileSpeedAdd;
+        if (e.multiHitAdd) multiHit += e.multiHitAdd;
+        if (e.critChanceAdd) effects.critChance = Math.min(1, effects.critChance + e.critChanceAdd);
+        if (e.critChance) effects.critChance = Math.max(effects.critChance, e.critChance);
+        if (e.critMult) effects.critMult = Math.max(effects.critMult, e.critMult);
+        if (e.poison && (!effects.poison || e.poison.dps > effects.poison.dps)) effects.poison = e.poison;
+        if (e.slowEffect && (!effects.slowEffect || e.slowEffect.factor < effects.slowEffect.factor)) effects.slowEffect = e.slowEffect;
+        if (e.stunDuration) effects.stunDuration = Math.max(effects.stunDuration, e.stunDuration);
+        if (e.knockbackPx) effects.knockbackPx = Math.max(effects.knockbackPx, e.knockbackPx);
+        if (e.markApplies && (!effects.markApplies || e.markApplies.mult > effects.markApplies.mult)) effects.markApplies = e.markApplies;
+        if (e.bonusVsEliteMult) effects.bonusVsEliteMult = Math.max(effects.bonusVsEliteMult, e.bonusVsEliteMult);
+        if (e.bonusVsSnailMult) effects.bonusVsSnailMult = Math.max(effects.bonusVsSnailMult, e.bonusVsSnailMult);
+        if (e.executeChance) { effects.executeChance = Math.max(effects.executeChance, e.executeChance); effects.executeHpFrac = Math.max(effects.executeHpFrac, e.executeHpFrac || 0.15); }
+        if (e.coinPerKillBonus) effects.coinPerKillBonus += e.coinPerKillBonus;
+        if (e.coinOnHit) effects.coinOnHit += e.coinOnHit;
+        if (e.incomeBonus) effects.incomeBonus += e.incomeBonus;
+        if (e.healPerWave) effects.healPerWave += e.healPerWave;
+        if (e.auraFireRateMult) effects.auraFireRateMult = Math.min(effects.auraFireRateMult, e.auraFireRateMult);
+        if (e.auraRangeAdd) effects.auraRangeAdd = Math.max(effects.auraRangeAdd, e.auraRangeAdd);
+        if (e.auraRadius) effects.auraRadius = Math.max(effects.auraRadius, e.auraRadius);
+        if (e.costReductionPct) effects.costReductionPct = Math.max(effects.costReductionPct, e.costReductionPct);
+        if (e.enemySlowAuraFactor) { effects.enemySlowAuraFactor = Math.min(effects.enemySlowAuraFactor, e.enemySlowAuraFactor); effects.enemySlowAuraRadius = Math.max(effects.enemySlowAuraRadius, e.enemySlowAuraRadius || 100); }
+      }
+    }
+
+    this.treeRange = range;
+    this.treeFireRate = Math.max(0.06, fireRate * fireRateMult);
+    this.range = this.treeRange;
+    this.fireRate = this.treeFireRate;
+    this.damage = Math.max(1, Math.round(damage * damageMult));
+    this.splashRadius = splash;
+    this.projectileSpeed = projSpeed;
+    this.multiHit = multiHit;
+    this.effects = effects;
+    this.projectileColor = darkenColor(this.getPalette().B, 0.4);
+
+    const p2 = def.paths[1];
+    const p2Level = this.pathLevels[1];
+    if (p2Level >= 3) {
+      const tier = p2.tiers[p2Level - 1];
+      if (tier.ability) {
+        this.ability = { name: tier.ability.name, desc: tier.ability.desc, cooldown: tier.ability.cooldown };
+        this.abilityMaxCooldown = tier.ability.cooldown;
+        this.abilityCooldownRemaining = Math.min(this.abilityCooldownRemaining, this.abilityMaxCooldown);
+      }
+    } else {
+      this.ability = null;
+    }
+  }
+
+  getPalette() {
+    const def = TOWER_DEFS[this.key];
+    const maxLevel = Math.max(...this.pathLevels);
+    const dominant = this.pathLevels.indexOf(maxLevel);
+    if (maxLevel >= 5 && dominant >= 0 && def.paths[dominant].t5Special) {
+      return Object.assign({}, def.basePalette, def.paths[dominant].t5Special.palette);
+    }
+    const base = Object.assign({}, def.basePalette);
+    if (maxLevel > 0 && dominant >= 0) {
+      base.B = lerpColor(def.basePalette.B, def.paths[dominant].color, (maxLevel / 5) * 0.85);
+    }
+    return base;
+  }
+
+  // Overlay/template efetivos pro desenho: normalmente vem da definição da
+  // torre, mas no T5 de um caminho com "t5Special" ele é trocado por um
+  // visual único (ex.: viseira prateada, chifre real, padrão da Mothra).
+  getEffectiveDef() {
+    const def = TOWER_DEFS[this.key];
+    const maxLevel = Math.max(...this.pathLevels);
+    const dominant = this.pathLevels.indexOf(maxLevel);
+    if (maxLevel >= 5 && dominant >= 0 && def.paths[dominant].t5Special) {
+      const special = def.paths[dominant].t5Special;
+      return Object.assign({}, def, { overlay: special.overlay, template: special.template || def.template });
+    }
+    return def;
+  }
+
+  findTarget(enemies) {
+    const canFly = !!TOWER_DEFS[this.key].canHitFlying;
+    let best = null, bestDist = -1;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      if (e.isFlying && !canFly) continue;
+      const d = Math.hypot(e.x - this.x, e.y - this.y);
+      if (d <= this.range && e.distanceTraveled > bestDist) { bestDist = e.distanceTraveled; best = e; }
+    }
+    return best;
+  }
+  findMultipleTargets(enemies, count) {
+    const canFly = !!TOWER_DEFS[this.key].canHitFlying;
+    const inRange = enemies.filter(e => !e.dead && (!e.isFlying || canFly) && Math.hypot(e.x - this.x, e.y - this.y) <= this.range);
+    inRange.sort((a, b) => b.distanceTraveled - a.distanceTraveled);
+    return inRange.slice(0, count);
+  }
+
+  update(dt, enemies, projectiles) {
+    this.cooldown -= dt;
+    if (this.ability && this.abilityCooldownRemaining > 0) this.abilityCooldownRemaining -= dt;
+
+    if (this.cooldown <= 0) {
+      let targets = [];
+      if (this.multiHit > 1) targets = this.findMultipleTargets(enemies, this.multiHit);
+      else { const tgt = this.findTarget(enemies); if (tgt) targets = [tgt]; }
+
+      if (targets.length > 0) {
+        this.angle = Math.atan2(targets[0].y - this.y, targets[0].x - this.x);
+        playShoot(this.key, this.pathLevels);
+        for (const target of targets) {
+          let dmg = this.damage;
+          let isCrit = false;
+          if (this.effects.bonusVsEliteMult > 1 && target.isElite) dmg *= this.effects.bonusVsEliteMult;
+          if (this.effects.bonusVsSnailMult > 1 && target.isSnail) dmg *= this.effects.bonusVsSnailMult;
+          if (this.effects.critChance && Math.random() < this.effects.critChance) { dmg *= this.effects.critMult; isCrit = true; }
+
+          if (this.effects.executeChance && !target.isElite && !target.isSnail &&
+              (target.hp / target.maxHp) <= this.effects.executeHpFrac && Math.random() < this.effects.executeChance) {
+            target.hp = 0; target.dead = true;
+            playDeath();
+            spawnDamageNumber(target.x, target.y - target.radius, target.maxHp, false, true);
+            continue;
+          }
+
+          const proj = new Projectile(this.x, this.y, target, dmg, this.projectileSpeed, this.projectileColor, this.splashRadius);
+          proj.isCrit = isCrit;
+          if (this.effects.poison) proj.poison = this.effects.poison;
+          if (this.effects.slowEffect) proj.slowEffect = this.effects.slowEffect;
+          if (this.effects.markApplies) proj.markApplies = this.effects.markApplies;
+          if (this.effects.stunDuration) proj.stunDuration = this.effects.stunDuration;
+          if (this.effects.knockbackPx) proj.knockbackPx = this.effects.knockbackPx;
+          if (this.effects.coinOnHit) proj.coinOnHit = this.effects.coinOnHit;
+          if (this.effects.coinPerKillBonus) proj.coinPerKillBonus = this.effects.coinPerKillBonus;
+          projectiles.push(proj);
+        }
+        this.cooldown = this.fireRate;
+      }
+    }
+  }
+
+  draw(ctx2d, isSelected) {
+    ctx2d.save();
+    ctx2d.translate(this.x, this.y);
+    ctx2d.fillStyle = '#6b8e3d';
+    ctx2d.beginPath(); ctx2d.arc(0, 0, 22, 0, Math.PI * 2); ctx2d.fill();
+    ctx2d.strokeStyle = '#4d6b28'; ctx2d.lineWidth = 2; ctx2d.stroke();
+    ctx2d.restore();
+
+    const def = TOWER_DEFS[this.key];
+    const maxLevel = Math.max(...this.pathLevels);
+    const dominant = this.pathLevels.indexOf(maxLevel);
+    if (maxLevel >= 3) {
+      const glowColor = def.paths[dominant].color;
+      const pulse = maxLevel >= 5 ? (0.4 + 0.3 * Math.sin(state.gameTime * 4)) : 0.22;
+      ctx2d.save();
+      ctx2d.strokeStyle = glowColor;
+      ctx2d.globalAlpha = pulse;
+      ctx2d.lineWidth = maxLevel >= 5 ? 4 : 2;
+      ctx2d.beginPath();
+      ctx2d.arc(this.x, this.y, 26 + (maxLevel >= 5 ? 4 : 0), 0, Math.PI * 2);
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+
+    const palette = resolvePalette(this.getPalette());
+    if (this.key === 'vagalume') {
+      // Oscilação orgânica: uma onda lenta de base + uma mais rápida por cima,
+      // pra não parecer um piscar mecânico de liga/desliga.
+      const slowWave = 0.5 + 0.5 * Math.sin(state.gameTime * 2.2 + this.flickerPhase);
+      const fastWave = 0.5 + 0.5 * Math.sin(state.gameTime * 7.3 + this.flickerPhase * 2);
+      const flicker = Math.max(0.06, Math.min(1, slowWave * 0.75 + fastWave * 0.25));
+      palette.X = lerpColor('#3a3510', '#fff59d', flicker);
+    }
+    drawCreatureSprite(ctx2d, this.x, this.y, 3, this.getEffectiveDef(), this.angle + Math.PI / 2, palette);
+
+    if (isSelected) {
+      ctx2d.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx2d.lineWidth = 2;
+      ctx2d.beginPath();
+      ctx2d.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+      ctx2d.stroke();
+    }
+  }
+}
+
+/* ============================================================
+   PROJÉTIL
+   ============================================================ */
+class Projectile {
+  constructor(x, y, target, damage, speed, color, splashRadius) {
+    this.x = x; this.y = y; this.target = target;
+    this.damage = damage; this.speed = speed;
+    this.color = color; this.splashRadius = splashRadius; this.dead = false;
+    this.poison = null; this.slowEffect = null; this.markApplies = null;
+    this.stunDuration = 0; this.knockbackPx = 0;
+    this.coinOnHit = 0; this.coinPerKillBonus = 0;
+    this.isCrit = false;
+  }
+
+  update(dt, enemies) {
+    if (!this.target || this.target.dead) { this.dead = true; return; }
+    const dx = this.target.x - this.x, dy = this.target.y - this.y;
+    const dist = Math.hypot(dx, dy);
+    const moveDist = this.speed * dt;
+
+    if (dist <= moveDist) {
+      let dmg = this.damage;
+      if (this.target.markedUntil > state.gameTime && this.target.markMultiplier > 1) dmg *= this.target.markMultiplier;
+      this.target.takeDamage(dmg);
+      const killed = this.target.dead;
+      spawnDamageNumber(this.target.x, this.target.y - this.target.radius, dmg, this.isCrit);
+
+      if (this.splashRadius > 0) {
+        for (const e of enemies) {
+          if (e === this.target || e.dead) continue;
+          const d = Math.hypot(e.x - this.target.x, e.y - this.target.y);
+          if (d <= this.splashRadius) e.takeDamage(this.damage * 0.5);
+        }
+      }
+      if (this.poison) { this.target.poisonDps = this.poison.dps; this.target.poisonUntil = state.gameTime + this.poison.duration; }
+      if (this.slowEffect) { this.target.slowFactor = this.slowEffect.factor; this.target.slowUntil = state.gameTime + this.slowEffect.duration; }
+      if (this.markApplies) { this.target.markMultiplier = this.markApplies.mult; this.target.markedUntil = state.gameTime + this.markApplies.duration; }
+      // Chefes resistem bastante a atordoamento/empurrão (senão ficariam presos).
+      if (this.stunDuration) applyStun(this.target, this.stunDuration);
+      if (this.knockbackPx) applyKnockback(this.target, this.knockbackPx);
+      if (this.coinOnHit) state.coins += this.coinOnHit;
+      if (this.coinPerKillBonus && killed) state.coins += this.coinPerKillBonus;
+
+      this.dead = true;
+    } else {
+      this.x += (dx / dist) * moveDist;
+      this.y += (dy / dist) * moveDist;
+    }
+  }
+
+  draw(ctx2d) {
+    ctx2d.fillStyle = this.color;
+    ctx2d.beginPath();
+    ctx2d.arc(this.x, this.y, 4, 0, Math.PI * 2);
+    ctx2d.fill();
+  }
+}
+
+/* ============================================================
+   AURAS (passivas, recalculadas todo frame)
+   ============================================================ */
+function applyAuras() {
+  const globalBuff = state.fieldEffects.find(f => f.type === 'towerBuff');
+  for (const t of state.towers) {
+    t.range = t.treeRange;
+    t.fireRate = t.treeFireRate * (globalBuff ? globalBuff.fireRateMult : 1);
+  }
+  for (const en of state.enemies) en.auraSlowFactor = 1;
+
+  for (const src of state.towers) {
+    const e = src.effects;
+    if (!e) continue;
+    if (e.auraFireRateMult < 1 || e.auraRangeAdd > 0) {
+      for (const t of state.towers) {
+        if (t === src) continue;
+        if (Math.hypot(t.x - src.x, t.y - src.y) <= (e.auraRadius || 120)) {
+          if (e.auraFireRateMult < 1) t.fireRate *= e.auraFireRateMult;
+          if (e.auraRangeAdd > 0) t.range += e.auraRangeAdd;
+        }
+      }
+    }
+    if (e.enemySlowAuraFactor < 1) {
+      for (const en of state.enemies) {
+        if (en.dead) continue;
+        if (Math.hypot(en.x - src.x, en.y - src.y) <= (e.enemySlowAuraRadius || 100)) {
+          en.auraSlowFactor = Math.min(en.auraSlowFactor, e.enemySlowAuraFactor);
+        }
+      }
+    }
+  }
+}
+
+/* ============================================================
+   SOM
+   ============================================================ */
+let audioCtx = null;
+let muted = false;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, type, duration, vol = 0.15) {
+  if (muted || !audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// Cada torre tem seu timbre; sobe de tom conforme os tiers investidos, e cada
+// tiro tem uma leve variação aleatória pra não soar robótico.
+const SOUND_PROFILES = {
+  besouro: { freq: 180, type: 'square' },
+  abelha: { freq: 520, type: 'sawtooth' },
+  borboleta: { freq: 700, type: 'sine' },
+  aranha: { freq: 140, type: 'triangle' },
+  mariposa: { freq: 850, type: 'sine' },
+  gafanhoto: { freq: 260, type: 'square' },
+  formiga: { freq: 320, type: 'square' },
+  libelula: { freq: 600, type: 'sawtooth' },
+  joaninha: { freq: 420, type: 'sine' },
+  vagalume: { freq: 900, type: 'sine' }
+};
+function playShoot(key, pathLevels) {
+  const profile = SOUND_PROFILES[key] || { freq: 500, type: 'square' };
+  const totalTiers = pathLevels ? (pathLevels[0] + pathLevels[1] + pathLevels[2]) : 0;
+  const tierMult = 1 + totalTiers * 0.02;
+  const jitter = 0.94 + Math.random() * 0.12;
+  playTone(profile.freq * tierMult * jitter, profile.type, 0.08, 0.12);
+}
+function playHit() { playTone(200, 'sawtooth', 0.1, 0.1); }
+function playDeath() { playTone(150, 'triangle', 0.25, 0.15); }
+function playPlace() { playTone(600, 'sine', 0.12, 0.1); playTone(900, 'sine', 0.12, 0.1); }
+function playAbility() {
+  if (muted || !audioCtx) return;
+  [700, 950, 1300].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.18, 0.14), i * 60));
+}
+function playWaveStart() {
+  if (muted || !audioCtx) return;
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => setTimeout(() => playTone(freq, 'sine', 0.2, 0.15), i * 100));
+}
+
+document.getElementById('muteBtn').addEventListener('click', () => {
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? '🔇 Som Desligado' : '🔊 Som Ligado';
+  if (!muted) initAudio();
+});
+
+/* ============================================================
+   ONDAS
+   ============================================================ */
+// Estatísticas-base de uma onda: escala mais forte que antes, com um "chute"
+// extra depois da onda 10 pra compensar o poder dos 150 upgrades disponíveis.
+function waveBaseStats(wave) {
+  const lateKick = Math.pow(wave, 1.7) * 1.2;
+  const hp = Math.round(20 + wave * 11 + lateKick);
+  const speed = 55 + Math.min(wave * 1.6, 55);
+  const reward = 5 + Math.floor(wave / 2) + Math.floor(wave / 6);
+  return { hp, speed, reward };
+}
+
+function startWave() {
+  if (state.waveInProgress || state.gameOver) return;
+  state.wave++;
+  state.waveInProgress = true;
+  playWaveStart();
+
+  const count = 5 + state.wave * 2;
+  state.spawnQueue = [];
+  const { hp: baseHp, speed: baseSpeed, reward: baseReward } = waveBaseStats(state.wave);
+
+  for (let i = 0; i < count; i++) {
+    const isElite = state.wave >= 3 && i === count - 1;
+    if (isElite) {
+      state.spawnQueue.push({ hp: baseHp * 3.5, speed: baseSpeed * 0.65, reward: baseReward * 4, radius: 16, color: '#7c3aed', isElite: true });
+    } else {
+      state.spawnQueue.push({ hp: baseHp, speed: baseSpeed, reward: baseReward, radius: 10, color: '#a8d43f', isElite: false });
+    }
+  }
+  if (state.wave >= 2) {
+    const snailCount = 1 + Math.floor(state.wave / 4);
+    for (let i = 0; i < snailCount; i++) {
+      const insertPos = Math.floor(Math.random() * (state.spawnQueue.length + 1));
+      state.spawnQueue.splice(insertPos, 0, {
+        hp: Math.round(baseHp * 4.5), speed: baseSpeed * 0.4, reward: Math.round(baseReward * 2.5),
+        radius: 15, color: '#c17a3a', isElite: false, isSnail: true
+      });
+    }
+  }
+
+  // Chefe: um caracol gigante a cada 5 ondas, bem mais lento pra compensar
+  // a vida gigantesca, com fase de fúria na metade da vida e resistência
+  // a atordoamento/empurrão (ver Projectile.update).
+  if (state.wave % 5 === 0) {
+    const insertPos = Math.floor(state.spawnQueue.length / 2);
+    state.spawnQueue.splice(insertPos, 0, {
+      hp: Math.round(baseHp * 18), speed: baseSpeed * 0.42, reward: Math.round(baseReward * 12), radius: 24,
+      color: '#6a1b9a', isElite: false, isSnail: true, isBoss: true
+    });
+  }
+
+  // Voador: só torres com asas (canHitFlying) conseguem mirar nele -
+  // aparece a partir da onda 3, frágil mas rápido.
+  if (state.wave >= 3) {
+    const flyCount = 1 + Math.floor(state.wave / 5);
+    for (let i = 0; i < flyCount; i++) {
+      const insertPos = Math.floor(Math.random() * (state.spawnQueue.length + 1));
+      state.spawnQueue.splice(insertPos, 0, {
+        hp: Math.round(baseHp * 0.55), speed: baseSpeed * 1.3, reward: Math.round(baseReward * 1.3),
+        radius: 9, color: '#00acc1', isElite: false, isFlying: true
+      });
+    }
+  }
+
+  // Caracol Arcano: concha em espiral bem visível, IMUNE a atordoamento.
+  // É o contrapeso pro stun (que ficou forte de propósito) sem precisar
+  // nerfar as torres de controle - aparece com força a partir da onda 7.
+  if (state.wave >= 7) {
+    const arcaneCount = 1 + Math.floor((state.wave - 7) / 3);
+    for (let i = 0; i < arcaneCount; i++) {
+      const insertPos = Math.floor(Math.random() * (state.spawnQueue.length + 1));
+      state.spawnQueue.splice(insertPos, 0, {
+        hp: Math.round(baseHp * 2.4), speed: baseSpeed * 0.62, reward: Math.round(baseReward * 3),
+        radius: 16, color: '#4a2f8f', isElite: false, isSnail: true, isAntiStun: true
+      });
+    }
+  }
+
+  state.spawnTimer = 0;
+  updateUI();
+}
+
+/* ============================================================
+   LOOP PRINCIPAL
+   ============================================================ */
+function update(dt) {
+  state.gameTime += dt;
+  updateDamageNumbers(dt);
+
+  // habilidades com duração (nuvem, veneno em área, buff de torres, hipnose...)
+  state.fieldEffects = state.fieldEffects.filter(f => {
+    if (state.gameTime >= f.until) return false;
+    if (f.type === 'swarm') {
+      for (const e of state.enemies) if (!e.dead) e.takeDamage(f.dps * dt);
+    } else if (f.type === 'acid') {
+      for (const e of state.enemies) {
+        if (e.dead) continue;
+        e.poisonDps = Math.max(e.poisonDps, f.dps);
+        e.poisonUntil = Math.max(e.poisonUntil, state.gameTime + 0.3);
+        if (f.mark) { e.markMultiplier = Math.max(e.markMultiplier, f.mark); e.markedUntil = Math.max(e.markedUntil, state.gameTime + 0.3); }
+      }
+    } else if (f.type === 'hypnosis') {
+      for (const e of state.enemies) if (!e.dead) e.hypnotizedUntil = Math.max(e.hypnotizedUntil, state.gameTime + 0.3);
+    } else if (f.type === 'swarmSteal') {
+      const alive = state.enemies.filter(e => !e.dead).length;
+      if (alive > 0) state.coins += f.coinsPerSecPerEnemy * alive * dt;
+    }
+    // 'towerBuff' é lido diretamente em applyAuras()
+    return true;
+  });
+
+  if (state.waveInProgress) {
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0 && state.spawnQueue.length > 0) {
+      const data = state.spawnQueue.shift();
+      state.enemies.push(new Slug(data.hp, data.speed, data.reward, data.radius, data.color, data.isElite, data.isSnail, data.isBoss, data.isFlying, data.isAntiStun));
+      state.spawnTimer = 0.8;
+    }
+    if (state.spawnQueue.length === 0 && state.enemies.length === 0) {
+      state.waveInProgress = false;
+      state.coins += 15 + state.wave * 2;
+      checkBestWave();
+      let heal = 0;
+      for (const t of state.towers) if (t.effects && t.effects.healPerWave) heal += t.effects.healPerWave;
+      if (heal > 0) state.life = Math.min(100, state.life + heal);
+    }
+  }
+
+  for (const e of state.enemies) {
+    if (e.dead) continue;
+    e.update(dt);
+    if (e.leaked) {
+      state.life -= 10;
+      if (state.life <= 0) { state.life = 0; triggerGameOver(); }
+    }
+  }
+  state.enemies = state.enemies.filter(e => {
+    if (e.dead) { if (!e.leaked) state.coins += e.reward; return false; }
+    return true;
+  });
+
+  applyAuras();
+  for (const t of state.towers) t.update(dt, state.enemies, state.projectiles);
+  for (const p of state.projectiles) p.update(dt, state.enemies);
+  state.projectiles = state.projectiles.filter(p => !p.dead);
+
+  // Renda passiva (Escaravelho-Sagrado, Formiga-Cortadeira etc.) só conta
+  // enquanto uma onda está de fato rolando - senão dava pra ficar parado
+  // sem iniciar onda nenhuma só acumulando moedas de graça.
+  if (state.waveInProgress) {
+    state.incomeTimer -= dt;
+    if (state.incomeTimer <= 0) {
+      state.incomeTimer = 1;
+      let bonus = 0;
+      for (const t of state.towers) if (t.effects && t.effects.incomeBonus) bonus += t.effects.incomeBonus;
+      if (bonus > 0) state.coins += bonus;
+    }
+  } else {
+    state.incomeTimer = 1;
+  }
+
+  // Autoplay: se ligado, inicia a próxima onda sozinho um pouco depois que
+  // a anterior termina (sem precisar clicar em "Iniciar Onda").
+  if (state.autoplay && !state.waveInProgress && !state.gameOver && state.enemies.length === 0 && state.spawnQueue.length === 0) {
+    state.autoplayTimer -= dt;
+    if (state.autoplayTimer <= 0) startWave();
+  } else {
+    state.autoplayTimer = 1.2;
+  }
+
+  updateUI();
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bgCanvas, 0, 0);
+  for (const t of state.towers) t.draw(ctx, t === state.selectedTower);
+  for (const e of state.enemies) e.draw(ctx);
+  for (const p of state.projectiles) p.draw(ctx);
+  drawDamageNumbers(ctx);
+  drawPlacementPreview();
+  if (state.paused) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff59d';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⏸️ PAUSADO', canvas.width / 2, canvas.height / 2);
+    ctx.restore();
+  }
+}
+
+function drawPlacementPreview() {
+  if (!state.selectedTowerType || !state.mouse.inside) return;
+  const def = TOWER_DEFS[state.selectedTowerType];
+  const mx = state.mouse.x, my = state.mouse.y;
+  const withinBounds = mx > 20 && mx < canvas.width - 20 && my > 20 && my < canvas.height - 20;
+  const farFromPath = distanceToPath({ x: mx, y: my }) >= 40;
+  const farFromTowers = !state.towers.some(tw => Math.hypot(tw.x - mx, tw.y - my) < 40);
+  const affordable = state.coins >= def.baseCost;
+  const valid = withinBounds && farFromPath && farFromTowers && affordable;
+
+  ctx.beginPath();
+  ctx.arc(mx, my, def.baseStats.range, 0, Math.PI * 2);
+  ctx.fillStyle = valid ? 'rgba(255,255,255,0.15)' : 'rgba(255,0,0,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = valid ? 'rgba(255,255,255,0.6)' : 'rgba(255,0,0,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.7;
+  drawCreatureSprite(ctx, mx, my, 3, def, 0, resolvePalette(def.basePalette));
+  ctx.globalAlpha = 1;
+  if (!valid) {
+    ctx.strokeStyle = 'rgba(198,40,40,0.8)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(mx - 14, my - 14); ctx.lineTo(mx + 14, my + 14);
+    ctx.moveTo(mx + 14, my - 14); ctx.lineTo(mx - 14, my + 14);
+    ctx.stroke();
+  }
+}
+
+// Usamos setInterval em vez de requestAnimationFrame: o RAF é pausado pelo
+// navegador quando a aba não está em foco/visível (economia de bateria), o
+// que fazia o jogo travar completamente ao trocar de janela. O setInterval
+// continua disparando mesmo em segundo plano (o navegador pode atrasar um
+// pouco os ticks, mas não os suspende de vez), e como calculamos o dt pelo
+// tempo real decorrido, o jogo recupera o atraso certinho quando você volta.
+let lastTime = performance.now();
+let speedMultiplier = 1;
+let gameLoopStarted = false;
+
+function gameTick() {
+  const now = performance.now();
+  let dt = (now - lastTime) / 1000;
+  lastTime = now;
+  dt = Math.min(dt, 0.5); // evita simular horas de uma vez se ficou muito tempo em 2º plano
+  dt *= speedMultiplier;
+  if (!state.gameOver && !state.paused) update(dt);
+  render();
+}
+function startGameLoop() {
+  if (gameLoopStarted) return;
+  gameLoopStarted = true;
+  lastTime = performance.now();
+  setInterval(gameTick, 16);
+}
+
+/* ============================================================
+   RECORDE (localStorage - com fallback seguro caso o navegador
+   bloqueie o acesso, o que pode acontecer ao abrir via file://)
+   ============================================================ */
+function getBestWave() {
+  try { return parseInt(localStorage.getItem('gardenWarsBestWave') || '0', 10) || 0; }
+  catch (e) { return state.bestWaveFallback || 0; }
+}
+function setBestWave(w) {
+  state.bestWaveFallback = w;
+  try { localStorage.setItem('gardenWarsBestWave', String(w)); }
+  catch (e) { /* localStorage indisponível (comum em file://) - segue só na memória */ }
+}
+function checkBestWave() {
+  if (state.wave > getBestWave()) {
+    setBestWave(state.wave);
+    bestWaveText.textContent = state.wave;
+  }
+}
+
+function triggerGameOver() {
+  state.gameOver = true;
+  checkBestWave();
+  document.getElementById('gameOverText').textContent = `As lesmas tomaram o jardim na onda ${state.wave}.`;
+  document.getElementById('gameOverOverlay').classList.add('show');
+}
+document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+
+/* ============================================================
+   INTERFACE
+   ============================================================ */
+const lifeText = document.getElementById('lifeText');
+const lifeBarInner = document.getElementById('lifeBarInner');
+const coinsText = document.getElementById('coinsText');
+const waveText = document.getElementById('waveText');
+const bestWaveText = document.getElementById('bestWaveText');
+bestWaveText.textContent = getBestWave();
+const waveStatus = document.getElementById('waveStatus');
+const startWaveBtn = document.getElementById('startWaveBtn');
+
+function updateUI() {
+  lifeText.textContent = Math.max(0, Math.round(state.life));
+  lifeBarInner.style.width = Math.max(0, state.life) + '%';
+  coinsText.textContent = Math.round(state.coins);
+  waveText.textContent = state.wave;
+
+  if (state.waveInProgress) {
+    startWaveBtn.disabled = true;
+    const remaining = state.spawnQueue.length + state.enemies.length;
+    waveStatus.textContent = `Onda ${state.wave} em andamento — ${remaining} lesma(s) restante(s).`;
+    startWaveBtn.textContent = 'Onda em andamento...';
+  } else if (state.wave === 0) {
+    startWaveBtn.disabled = false;
+    startWaveBtn.textContent = 'Iniciar Primeira Onda';
+    waveStatus.textContent = 'Posicione insetos e comece quando estiver pronto.';
+  } else {
+    startWaveBtn.disabled = false;
+    startWaveBtn.textContent = `Iniciar Onda ${state.wave + 1}`;
+    waveStatus.textContent = `Onda ${state.wave} concluída! Prepare-se para a próxima.`;
+  }
+
+  // Atualizações leves (sem recriar DOM) pra não travar cliques nos botões.
+  updatePathButtonsState();
+  updateAbilityPanel();
+}
+updateUI();
+startWaveBtn.addEventListener('click', () => { initAudio(); startWave(); });
+
+const pauseBtn = document.getElementById('pauseBtn');
+pauseBtn.addEventListener('click', () => {
+  state.paused = !state.paused;
+  pauseBtn.textContent = state.paused ? '▶️ Continuar' : '⏸️ Pausar';
+  pauseBtn.classList.toggle('on', state.paused);
+});
+
+const autoplayBtn = document.getElementById('autoplayBtn');
+autoplayBtn.addEventListener('click', () => {
+  state.autoplay = !state.autoplay;
+  autoplayBtn.textContent = state.autoplay ? '🤖 Autoplay: Ligado' : '🤖 Autoplay: Desligado';
+  autoplayBtn.classList.toggle('on', state.autoplay);
+  if (state.autoplay) { initAudio(); state.autoplayTimer = 1.2; }
+});
+
+const speedBtn = document.getElementById('speedBtn');
+const SPEED_STEPS = [1, 2, 3];
+let speedIndex = 0;
+speedBtn.addEventListener('click', () => {
+  speedIndex = (speedIndex + 1) % SPEED_STEPS.length;
+  speedMultiplier = SPEED_STEPS[speedIndex];
+  speedBtn.textContent = `⏩ Velocidade: ${speedMultiplier}x`;
+});
+
+// ---------- Loja ----------
+const shopGrid = document.getElementById('shopGrid');
+function renderTowerIcon(key, pathLevels, px) {
+  px = px || 32;
+  const c = document.createElement('canvas');
+  c.width = px; c.height = px;
+  const cctx = c.getContext('2d');
+  cctx.imageSmoothingEnabled = false;
+  const def = TOWER_DEFS[key];
+  let paletteBase = Object.assign({}, def.basePalette);
+  const maxLevel = Math.max(...pathLevels);
+  const dominant = pathLevels.indexOf(maxLevel);
+  if (maxLevel > 0 && dominant >= 0) {
+    paletteBase.B = lerpColor(def.basePalette.B, def.paths[dominant].color, (maxLevel / 5) * 0.85);
+  }
+  const palette = resolvePalette(paletteBase);
+  drawCreatureSprite(cctx, px / 2, px / 2, px / 15, def, 0, palette);
+  return c;
+}
+function buildShop() {
+  shopGrid.innerHTML = '';
+  for (const key of Object.keys(TOWER_DEFS)) {
+    const def = TOWER_DEFS[key];
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.dataset.key = key;
+    div.title = def.label;
+    div.appendChild(renderTowerIcon(key, [0, 0, 0], 32));
+    const nameDiv = document.createElement('div'); nameDiv.className = 'name'; nameDiv.textContent = def.label;
+    const costDiv = document.createElement('div'); costDiv.className = 'cost'; costDiv.textContent = def.baseCost + ' moedas';
+    div.appendChild(nameDiv); div.appendChild(costDiv);
+    div.addEventListener('click', () => {
+      if (state.selectedTowerType === key) { state.selectedTowerType = null; }
+      else { state.selectedTowerType = key; state.selectedTower = null; hideTowerInfoPanel(); }
+      updateShopSelection();
+    });
+    shopGrid.appendChild(div);
+  }
+}
+function updateShopSelection() {
+  document.querySelectorAll('.shop-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.key === state.selectedTowerType);
+  });
+}
+buildShop();
+
+/* ============================================================
+   INTRO E SELEÇÃO DE MAPA
+   ============================================================ */
+function renderMapThumbnail(mapPath, w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const tctx = c.getContext('2d');
+  tctx.fillStyle = '#8bc34a';
+  tctx.fillRect(0, 0, w, h);
+  const scaleX = w / 900, scaleY = h / 600;
+  tctx.strokeStyle = '#c9a06a';
+  tctx.lineWidth = 5;
+  tctx.lineCap = 'round';
+  tctx.lineJoin = 'round';
+  tctx.beginPath();
+  tctx.moveTo(mapPath[0].x * scaleX, mapPath[0].y * scaleY);
+  for (let i = 1; i < mapPath.length; i++) tctx.lineTo(mapPath[i].x * scaleX, mapPath[i].y * scaleY);
+  tctx.stroke();
+  // marcador de entrada/saída
+  tctx.fillStyle = '#5d4037';
+  tctx.beginPath();
+  tctx.arc(mapPath[0].x * scaleX, mapPath[0].y * scaleY, 4, 0, Math.PI * 2);
+  tctx.fill();
+  const last = mapPath[mapPath.length - 1];
+  tctx.fillStyle = '#8d6e63';
+  tctx.fillRect(last.x * scaleX - 6, last.y * scaleY - 5, 12, 10);
+  return c;
+}
+
+function buildMapGrid() {
+  const mapGrid = document.getElementById('mapGrid');
+  mapGrid.innerHTML = '';
+  MAPS.forEach((map, idx) => {
+    const opt = document.createElement('div');
+    opt.className = 'map-option';
+    opt.appendChild(renderMapThumbnail(map.path, 190, 130));
+    const label = document.createElement('div');
+    label.className = 'map-name';
+    label.textContent = map.name;
+    opt.appendChild(label);
+    opt.addEventListener('click', () => startGameWithMap(idx));
+    mapGrid.appendChild(opt);
+  });
+}
+
+function startGameWithMap(idx) {
+  initAudio();
+  selectMap(idx);
+  document.getElementById('introScreen').style.display = 'none';
+  document.getElementById('gameWrapper').style.display = 'flex';
+  startGameLoop();
+}
+
+buildMapGrid();
+
+// ---------- Painel da torre selecionada (3 caminhos + habilidade) ----------
+const towerInfoPanel = document.getElementById('towerInfoPanel');
+const infoTitle = document.getElementById('infoTitle');
+const infoDamage = document.getElementById('infoDamage');
+const infoRange = document.getElementById('infoRange');
+const infoRate = document.getElementById('infoRate');
+const pathsContainer = document.getElementById('pathsContainer');
+const abilityPanel = document.getElementById('abilityPanel');
+const abilityName = document.getElementById('abilityName');
+const abilityDesc = document.getElementById('abilityDesc');
+const abilityBtn = document.getElementById('abilityBtn');
+const sellBtn = document.getElementById('sellBtn');
+
+// Reconstrói o painel inteiro - só deve ser chamado em eventos pontuais
+// (seleção, compra, reset, evolução), NUNCA a cada frame.
+function showTowerInfoPanel(tower) {
+  towerInfoPanel.style.display = 'flex';
+  const def = TOWER_DEFS[tower.key];
+  infoTitle.textContent = def.label;
+  infoDamage.textContent = tower.damage + (tower.splashRadius > 0 ? ' (área)' : '') + (tower.multiHit > 1 ? ` x${tower.multiHit} alvos` : '');
+  infoRange.textContent = Math.round(tower.range) + ' px';
+  infoRate.textContent = tower.fireRate.toFixed(2) + ' s/tiro';
+
+  const maxLevel = Math.max(...tower.pathLevels);
+  const dominant = tower.pathLevels.indexOf(maxLevel);
+
+  pathsContainer.innerHTML = '';
+  for (let p = 0; p < 3; p++) {
+    const pathDef = def.paths[p];
+    const level = tower.pathLevels[p];
+    const col = document.createElement('div');
+    col.className = 'path-col' + (maxLevel > 0 && p === dominant ? ' dominant' : '');
+
+    let html = `<div class="path-name"><span>${pathDef.name}</span><span>T${level}/5</span></div><div class="pips">`;
+    for (let i = 0; i < 5; i++) html += `<span class="pip ${i < level ? 'filled' : ''}"></span>`;
+    html += `</div>`;
+
+    if (level > 0) {
+      const cur = pathDef.tiers[level - 1];
+      html += `<div class="tier-current"><b>${cur.name}</b><br>${cur.desc}</div>`;
+    } else {
+      html += `<div class="tier-current">Não iniciado.</div>`;
+    }
+
+    if (level < 5) {
+      const nextTier = pathDef.tiers[level];
+      const discount = getDiscountFor(tower);
+      const cost = Math.round(nextTier.cost * (1 - discount));
+      const unlocked = canUpgradePath(tower.pathLevels, p);
+      const canBuy = unlocked && state.coins >= cost;
+      html += `<button class="buy-tier-btn" data-path="${p}" data-cost="${cost}" ${canBuy ? '' : 'disabled'}>`
+            + `${unlocked ? `Comprar T${level + 1}: ${nextTier.name} (${cost} moedas${discount > 0 ? ' - desconto!' : ''})` : 'Bloqueado (crosspathing)'}`
+            + `</button>`;
+    } else {
+      html += `<div class="tier-maxed">Caminho no máximo!</div>`;
+    }
+    if (level > 0) html += `<button class="reset-path-btn" data-path="${p}">Resetar caminho (+50% de volta)</button>`;
+
+    col.innerHTML = html;
+    pathsContainer.appendChild(col);
+  }
+
+  pathsContainer.querySelectorAll('.buy-tier-btn').forEach(btn => {
+    btn.addEventListener('click', () => buyTier(tower, parseInt(btn.dataset.path, 10)));
+  });
+  pathsContainer.querySelectorAll('.reset-path-btn').forEach(btn => {
+    btn.addEventListener('click', () => resetPath(tower, parseInt(btn.dataset.path, 10)));
+  });
+
+  if (tower.ability) {
+    abilityPanel.style.display = 'block';
+    abilityName.textContent = tower.ability.name;
+    abilityDesc.textContent = tower.ability.desc;
+  } else {
+    abilityPanel.style.display = 'none';
+  }
+}
+function hideTowerInfoPanel() { towerInfoPanel.style.display = 'none'; }
+
+// Atualização LEVE por frame: só habilita/desabilita botões já existentes
+// (sem inner-HTML, pra não quebrar cliques em andamento).
+function updatePathButtonsState() {
+  if (!state.selectedTower) return;
+  const tower = state.selectedTower;
+  pathsContainer.querySelectorAll('.buy-tier-btn').forEach(btn => {
+    const p = parseInt(btn.dataset.path, 10);
+    const cost = parseInt(btn.dataset.cost, 10);
+    const ok = canUpgradePath(tower.pathLevels, p) && state.coins >= cost;
+    btn.disabled = !ok;
+  });
+}
+function updateAbilityPanel() {
+  const tower = state.selectedTower;
+  if (!tower || !tower.ability) return;
+  const remaining = tower.abilityCooldownRemaining;
+  abilityBtn.disabled = remaining > 0;
+  abilityBtn.textContent = remaining > 0 ? `Recarregando (${Math.ceil(remaining)}s)` : 'Usar Habilidade';
+}
+
+function buyTier(tower, p) {
+  const def = TOWER_DEFS[tower.key];
+  if (!canUpgradePath(tower.pathLevels, p)) { flashMessage('Bloqueado: só um caminho até T5, um segundo até T2!'); return; }
+  const level = tower.pathLevels[p];
+  if (level >= 5) return;
+  const tier = def.paths[p].tiers[level];
+  const discount = getDiscountFor(tower);
+  const cost = Math.round(tier.cost * (1 - discount));
+  if (state.coins < cost) { flashMessage('Moedas insuficientes!'); return; }
+  state.coins -= cost;
+  tower.investedCoins += cost;
+  tower.pathPaidCoins[p] += cost;
+  tower.pathLevels[p]++;
+  tower.recompute();
+  playPlace();
+  flashMessage(`${def.label}: ${tier.name} (T${tower.pathLevels[p]})!`);
+  showTowerInfoPanel(tower);
+  updateUI();
+}
+
+function resetPath(tower, p) {
+  if (tower.pathLevels[p] === 0) return;
+  const refund = Math.round(tower.pathPaidCoins[p] * 0.5);
+  state.coins += refund;
+  tower.investedCoins -= tower.pathPaidCoins[p];
+  tower.pathPaidCoins[p] = 0;
+  tower.pathLevels[p] = 0;
+  tower.recompute();
+  flashMessage(`Caminho resetado! +${refund} moedas.`);
+  showTowerInfoPanel(tower);
+  updateUI();
+}
+
+abilityBtn.addEventListener('click', () => {
+  const tower = state.selectedTower;
+  if (!tower || !tower.ability || tower.abilityCooldownRemaining > 0) return;
+  const handler = ABILITY_HANDLERS[tower.key];
+  if (handler) handler(tower, tower.pathLevels[1]);
+  tower.abilityCooldownRemaining = tower.abilityMaxCooldown;
+  playAbility();
+  flashMessage(`${tower.ability.name} ativada!`);
+});
+
+sellBtn.addEventListener('click', () => {
+  if (!state.selectedTower) return;
+  const refund = Math.round(state.selectedTower.investedCoins * 0.6);
+  state.coins += refund;
+  state.towers = state.towers.filter(t => t !== state.selectedTower);
+  flashMessage(`Torre vendida! +${refund} moedas.`);
+  state.selectedTower = null;
+  hideTowerInfoPanel();
+});
+
+const toast = document.getElementById('toast');
+let toastTimer = null;
+function flashMessage(text) {
+  toast.textContent = text;
+  toast.style.opacity = 1;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.opacity = 0; }, 1800);
+}
+
+/* ============================================================
+   ENTRADA DO MOUSE / TECLADO
+   ============================================================ */
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  state.mouse.x = e.clientX - rect.left;
+  state.mouse.y = e.clientY - rect.top;
+});
+canvas.addEventListener('mouseenter', () => { state.mouse.inside = true; });
+canvas.addEventListener('mouseleave', () => { state.mouse.inside = false; });
+
+function handleTapAt(x, y) {
+  if (state.gameOver) return;
+  initAudio();
+  const existing = state.towers.find(t => Math.hypot(t.x - x, t.y - y) < 22);
+  if (existing) {
+    state.selectedTowerType = null;
+    updateShopSelection();
+    state.selectedTower = existing;
+    showTowerInfoPanel(existing);
+    return;
+  }
+  if (state.selectedTowerType) tryPlaceTower(x, y);
+  else selectTowerAt(x, y);
+}
+
+function cancelSelection() {
+  state.selectedTowerType = null;
+  state.selectedTower = null;
+  updateShopSelection();
+  hideTowerInfoPanel();
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  handleTapAt(e.clientX - rect.left, e.clientY - rect.top);
+});
+
+canvas.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  cancelSelection();
+});
+
+// Suporte a toque (celular/tablet): não existe botão direito nesses
+// dispositivos, então o toque simples faz o mesmo que o clique, e o botão
+// "Cancelar seleção" (sempre visível) substitui o botão direito do mouse.
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  if (!touch) return;
+  const rect = canvas.getBoundingClientRect();
+  state.mouse.x = touch.clientX - rect.left;
+  state.mouse.y = touch.clientY - rect.top;
+  state.mouse.inside = true;
+  handleTapAt(touch.clientX - rect.left, touch.clientY - rect.top);
+}, { passive: false });
+
+document.getElementById('cancelSelectionBtn').addEventListener('click', cancelSelection);
+
+function tryPlaceTower(x, y) {
+  const def = TOWER_DEFS[state.selectedTowerType];
+  if (x < 20 || x > canvas.width - 20 || y < 20 || y > canvas.height - 20) { flashMessage('Fora da área!'); return; }
+  if (state.coins < def.baseCost) { flashMessage('Moedas insuficientes!'); return; }
+  if (distanceToPath({ x, y }) < 40) { flashMessage('Muito perto do caminho!'); return; }
+  if (state.towers.some(tw => Math.hypot(tw.x - x, tw.y - y) < 40)) { flashMessage('Muito perto de outra torre!'); return; }
+  state.towers.push(new Tower(state.selectedTowerType, x, y));
+  state.coins -= def.baseCost;
+  playPlace();
+  updateUI();
+}
+
+function selectTowerAt(x, y) {
+  const found = state.towers.find(t => Math.hypot(t.x - x, t.y - y) < 22);
+  state.selectedTower = found || null;
+  if (found) showTowerInfoPanel(found);
+  else hideTowerInfoPanel();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    cancelSelection();
+  }
+});
+</script>
+</body>
+</html>
