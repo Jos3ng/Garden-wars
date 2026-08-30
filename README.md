@@ -310,7 +310,7 @@ Não é necessário instalar dependências ou configurar um servidor.
 ### 1. Clone o repositório
 
 ``` bash
-git clone https://github.com/SEU-USUARIO/Garden-Wars.git
+git clone https://github.com/Jos3ng/Garden-Wars.git
 ```
 
 ### 2. Entre na pasta
@@ -609,7 +609,7 @@ No dependencies or build tools are required.
 ### 1. Clone the repository
 
 ``` bash
-git clone https://github.com/YOUR-USERNAME/Garden-Wars.git
+git clone https://github.com/Jos3ng/Garden-Wars.git
 ```
 
 ### 2. Enter the project directory
